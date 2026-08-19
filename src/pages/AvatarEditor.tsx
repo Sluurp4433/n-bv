@@ -8,6 +8,8 @@ import { Avatar } from '../components/Avatar'
 import { Button, Card, cn } from '../components/ui'
 import { memberColor } from '../lib/memberColor'
 import {
+  ANIMAL_COLORS,
+  ANIMAL_KINDS,
   BROW_STYLES,
   CLOTHING_COLORS,
   EYE_STYLES,
@@ -16,10 +18,14 @@ import {
   HAIR_COLORS,
   HAIR_STYLES,
   HEADWEAR_STYLES,
+  HUMAN_KINDS,
+  INSECT_KINDS,
+  KIND_LABELS,
   MOUTH_STYLES,
   NECKWEAR_STYLES,
   SKIN_TONES,
   TOP_STYLES,
+  isHuman,
   randomAvatar,
   sanitizeAvatar,
   type AvatarConfig,
@@ -93,6 +99,49 @@ export function AvatarEditor() {
 
         {/* Val */}
         <div>
+          {/* Figurtyp */}
+          <div className="mb-5">
+            <p className="mb-2 text-sm font-medium text-slate-700">Figurtyp</p>
+            {[
+              { label: 'Människa', kinds: HUMAN_KINDS as readonly string[] },
+              { label: 'Djur', kinds: ANIMAL_KINDS as readonly string[] },
+              { label: 'Insekter', kinds: INSECT_KINDS as readonly string[] },
+            ].map((group) => (
+              <div key={group.label} className="mb-3">
+                <p className="mb-1 text-xs text-slate-400">{group.label}</p>
+                <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+                  {group.kinds.map((k) => {
+                    const selected = cfg.kind === k
+                    return (
+                      <button
+                        key={k}
+                        onClick={() => setCfg({ ...cfg, kind: k })}
+                        className={cn(
+                          'flex flex-col items-center gap-1 rounded-lg border-2 bg-white p-1 transition-colors',
+                          selected ? 'border-brand-600' : 'border-slate-200 hover:border-slate-300'
+                        )}
+                        aria-pressed={selected}
+                        title={KIND_LABELS[k]}
+                      >
+                        <Avatar config={{ ...cfg, kind: k }} size={44} />
+                        <span className="text-[10px] text-slate-500">{KIND_LABELS[k]}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {!isHuman(cfg.kind) && (
+            <div className="space-y-5">
+              <ColorPicker label="Kroppsfärg" field="bodyColor" colors={ANIMAL_COLORS} cfg={cfg} setCfg={setCfg} />
+              <PartPicker label="Ögon" field="eyes" options={EYE_STYLES} cfg={cfg} setCfg={setCfg} />
+            </div>
+          )}
+
+          {isHuman(cfg.kind) && (
+          <>
           <div className="mb-4 flex gap-1 overflow-x-auto border-b border-slate-200">
             {TABS.map((t) => (
               <button
@@ -142,6 +191,8 @@ export function AvatarEditor() {
               <PartPicker label="Halsduk" field="neckwear" options={NECKWEAR_STYLES} cfg={cfg} setCfg={setCfg} />
               <ColorPicker label="Färg på halsduk" field="neckwearColor" colors={CLOTHING_COLORS} cfg={cfg} setCfg={setCfg} />
             </div>
+          )}
+          </>
           )}
         </div>
       </div>

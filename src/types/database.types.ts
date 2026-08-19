@@ -36,6 +36,78 @@ export type Database = {
         }
         Relationships: []
       }
+      documents: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          file_name: string
+          file_path: string
+          id: string
+          mime_type: string | null
+          size_bytes: number | null
+          title: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          file_name: string
+          file_path: string
+          id?: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          title: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          file_name?: string
+          file_path?: string
+          id?: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          title?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
+      announcements: {
+        Row: {
+          active: boolean
+          body: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          level: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          body?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          level?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          body?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          level?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
@@ -356,7 +428,7 @@ export type Database = {
       within_edit_window: { Args: { created: string }; Returns: boolean }
     }
     Enums: {
-      user_role: 'medlem' | 'admin'
+      user_role: 'medlem' | 'admin' | 'styrelse'
     }
     CompositeTypes: Record<string, never>
   }
@@ -381,5 +453,7 @@ export type ShiftBooking = Tables<'shift_bookings'>
 export type VehicleOverview = PublicSchema['Views']['vehicle_overview']['Row']
 export type AuditLog = Tables<'audit_logs'>
 export type AppSettings = Tables<'app_settings'>
+export type DocumentRow = Tables<'documents'>
+export type Announcement = Tables<'announcements'>
 export type UserRole = Enums<'user_role'>
 export type SearchResult = PublicSchema['Functions']['search_all']['Returns'][number]

@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
 import { useProfiles, creatorName } from '../lib/hooks'
 import { Badge, Card, LoadingState } from '../components/ui'
+import { WeekView } from '../components/WeekView'
+import { AnnouncementsBox } from '../components/AnnouncementsBox'
 import { formatDateTime, formatRelative } from '../lib/format'
 import { priorityLabel } from '../lib/constants'
 import type { Observation, LogbookEntry } from '../types/database.types'
@@ -72,6 +74,14 @@ export function Dashboard() {
         <p className="mt-1 text-sm text-slate-500">Här är en översikt över föreningens aktivitet.</p>
       </div>
 
+      {/* Driftinfo / aktuell info */}
+      <AnnouncementsBox />
+
+      {/* Veckovy för körpass */}
+      <div className="mb-6">
+        <WeekView />
+      </div>
+
       {/* Snabblänkar */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {QUICK_LINKS.map((q) => (
@@ -98,7 +108,7 @@ export function Dashboard() {
         <Card className="p-5">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-semibold text-brand-800">Senaste observationer</h2>
-            <Link to="/loggbok" className="text-sm text-brand-600 hover:underline">
+            <Link to="/observationer" className="text-sm text-brand-600 hover:underline">
               Visa alla
             </Link>
           </div>

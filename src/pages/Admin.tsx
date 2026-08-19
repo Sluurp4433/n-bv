@@ -18,12 +18,14 @@ import {
   LoadingState,
   PageHeader,
   Select,
+  Textarea,
 } from '../components/ui'
 import { formatDateTime } from '../lib/format'
+import { ANNOUNCEMENT_LEVELS, levelLabel, useAllAnnouncements } from '../lib/announcements'
 import { Pagination } from './Logbook'
-import type { AuditLog, Profile } from '../types/database.types'
+import type { AuditLog, Profile, Announcement } from '../types/database.types'
 
-type Tab = 'medlemmar' | 'audit' | 'gdpr'
+type Tab = 'medlemmar' | 'driftinfo' | 'audit' | 'gdpr'
 
 async function invokeFunction<T>(
   name: string,
@@ -48,6 +50,7 @@ export function Admin() {
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'medlemmar', label: 'Medlemmar' },
+    { id: 'driftinfo', label: 'Driftinfo' },
     { id: 'audit', label: 'Ändringslogg' },
     { id: 'gdpr', label: 'GDPR & gallring' },
   ]
@@ -74,6 +77,7 @@ export function Admin() {
       </div>
 
       {tab === 'medlemmar' && <MembersTab />}
+      {tab === 'driftinfo' && <AnnouncementsTab />}
       {tab === 'audit' && <AuditTab />}
       {tab === 'gdpr' && <GdprTab />}
     </div>
@@ -136,6 +140,7 @@ function MembersTab() {
                       className="w-32"
                     >
                       <option value="medlem">Medlem</option>
+                      <option value="styrelse">Styrelse</option>
                       <option value="admin">Administratör</option>
                     </Select>
                   </td>
@@ -457,6 +462,101 @@ function GdprTab() {
               <strong>{preview.orphan_vehicles}</strong>.
               <div className="mt-1 text-xs opacity-80">Gräns: {formatDateTime(preview.cutoff)}</div>
             </Alert>
+          </div>
+        )}
+      </Card>
+    </div>
+  )
+}
+
+/* ---------------- Driftinfo / meddelanden ---------------- */
+function AnnouncementsTab() {
+  const toast = useToast()
+  const qc = useQueryClient()
+  const q = useAllAnnouncements()
+  const { register, handleSubmit, reset, formState } = useForm<{ title: string; body: string; level: string }>({
+    defaultValues: { title: '', body: '', level: 'info' },
+  })
+
+  function invalidate() {
+    qc.invalidateQueries({ queryKey: ['announcements'] })
+  }
+
+  async function onCreate(v: { title: string; body: string; level: string }) {
+    const { error } = await supabase.from('announcements').insert({
+      title: v.title,
+      body: v.body || null,
+      level: v.level,
+      active: true,
+    })
+    if (error) return toast.error('Kunde inte skapa meddelandet.')
+    reset({ title: '', body: '', level: v.level })
+    invalidate()
+    toast.success('Meddelandet har publicerats.')
+  }
+
+  async function toggleActive(a: Announcement) {
+    const { error } = await supabase.from('announcements').update({ active: !a.active }).eq('id', a.id)
+    if (error) return toast.error('Kunde inte uppdatera.')
+    invalidate()
+  }
+
+  async function remove(a: Announcement) {
+    const { error } = await supabase.from('announcements').delete().eq('id', a.id)
+    if (error) return toast.error('Kunde inte ta bort.')
+    invalidate()
+    toast.success('Meddelandet har tagits bort.')
+  }
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      <Card className="p-5">
+        <h2 className="font-semibold text-brand-800">Nytt meddelande</h2>
+        <p className="mt-1 text-sm text-slate-500">Visas i driftinfo-rutan på startsidan för alla medlemmar.</p>
+        <form onSubmit={handleSubmit(onCreate)} className="mt-4 space-y-3">
+          <Field label="Rubrik" htmlFor="a-title">
+            <Input id="a-title" {...register('title', { required: true })} />
+          </Field>
+          <Field label="Text" htmlFor="a-body">
+            <Textarea id="a-body" rows={3} {...register('body')} />
+          </Field>
+          <Field label="Typ" htmlFor="a-level">
+            <Select id="a-level" {...register('level')}>
+              {ANNOUNCEMENT_LEVELS.map((l) => (<option key={l.value} value={l.value}>{l.label}</option>))}
+            </Select>
+          </Field>
+          <div className="flex justify-end">
+            <Button type="submit" loading={formState.isSubmitting}>Publicera</Button>
+          </div>
+        </form>
+      </Card>
+
+      <Card className="p-5">
+        <h2 className="mb-3 font-semibold text-brand-800">Publicerade meddelanden</h2>
+        {q.isLoading ? (
+          <LoadingState />
+        ) : (q.data?.length ?? 0) === 0 ? (
+          <p className="text-sm text-slate-400">Inga meddelanden ännu.</p>
+        ) : (
+          <div className="space-y-2">
+            {q.data!.map((a) => (
+              <div key={a.id} className="rounded-lg border border-slate-200 p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-slate-800">{a.title}</span>
+                      <Badge color={a.level === 'critical' ? 'red' : a.level === 'warning' ? 'amber' : 'blue'}>{levelLabel(a.level)}</Badge>
+                      <Badge color={a.active ? 'green' : 'slate'}>{a.active ? 'Aktiv' : 'Dold'}</Badge>
+                    </div>
+                    {a.body && <p className="mt-1 text-sm text-slate-600">{a.body}</p>}
+                  </div>
+                </div>
+                <div className="mt-2 flex gap-2">
+                  <Button variant="ghost" onClick={() => toggleActive(a)}>{a.active ? 'Dölj' : 'Visa'}</Button>
+                  <Button variant="ghost" onClick={() => remove(a)}>Ta bort</Button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </Card>

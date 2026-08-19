@@ -1,10 +1,12 @@
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/AuthProvider'
 import { useToast } from './Toast'
 import { Modal } from './Modal'
+import { MemberPicker } from './MemberPicker'
 import { Button, Field, Input, Textarea, Alert } from './ui'
-import { createShift } from '../lib/shifts'
+import { createShift, bookShift } from '../lib/shifts'
 import { toDatetimeLocal } from '../lib/format'
 
 type FormValues = {
@@ -40,6 +42,7 @@ export function ShiftForm({
   const toast = useToast()
   const qc = useQueryClient()
   const times = defaultTimes(day)
+  const [others, setOthers] = useState<string[]>([])
 
   const { register, handleSubmit, setError, reset, formState } = useForm<FormValues>({
     defaultValues: {
@@ -59,6 +62,11 @@ export function ShiftForm({
       return
     }
     if (!user) return
+    const needed = (values.bookSelf ? 1 : 0) + others.length
+    if (needed > Number(values.capacity)) {
+      setError('root', { message: `Antalet inbokade (${needed}) överstiger antal platser (${values.capacity}). Öka platserna eller ta bort medlemmar.` })
+      return
+    }
     const res = await createShift(
       {
         starts_at: new Date(values.starts_at).toISOString(),
@@ -71,13 +79,20 @@ export function ShiftForm({
       values.bookSelf,
       user.id
     )
-    if (res.error) {
-      setError('root', { message: res.error })
+    if (res.error || !res.id) {
+      setError('root', { message: res.error ?? 'Kunde inte skapa passet.' })
       return
     }
+    // Boka in övriga valda medlemmar (skaparen får boka andra)
+    let failed = 0
+    for (const id of others) {
+      const r = await bookShift(res.id, id)
+      if (r.error) failed++
+    }
     qc.invalidateQueries({ queryKey: ['shifts'] })
-    toast.success('Körpasset har skapats.')
+    toast.success(failed > 0 ? `Passet skapades, men ${failed} medlem(mar) kunde inte bokas.` : 'Körpasset har skapats.')
     reset()
+    setOthers([])
     onCreated()
   }
 
@@ -123,6 +138,12 @@ export function ShiftForm({
           <input type="checkbox" className="h-4 w-4" {...register('bookSelf')} />
           Boka in mig direkt på passet
         </label>
+        <MemberPicker
+          value={others}
+          onChange={setOthers}
+          exclude={user ? [user.id] : []}
+          label="Boka in andra medlemmar (valfritt)"
+        />
       </div>
     </Modal>
   )

@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import { sanitizeAvatar } from '../lib/avatar/config'
+import { sanitizeAvatar, isHuman } from '../lib/avatar/config'
 import type { Json } from '../types/database.types'
 import {
   BrowsLayer,
@@ -15,6 +15,7 @@ import {
   NeckwearLayer,
   TopLayer,
 } from '../lib/avatar/parts'
+import { CreatureCharacter } from '../lib/avatar/creatures'
 
 export function Avatar({
   config,
@@ -53,18 +54,24 @@ export function Avatar({
       {ring && <circle cx="50" cy="50" r="49" fill={ring} opacity="0.14" />}
 
       <g clipPath={`url(#clip-${clipId})`}>
-        <HairBack style={cfg.hair} color={cfg.hairColor} />
-        <TopLayer style={cfg.top} color={cfg.topColor} />
-        <Neck skin={cfg.skin} />
-        <NeckwearLayer style={cfg.neckwear} color={cfg.neckwearColor} />
-        <FaceLayer shape={cfg.face} skin={cfg.skin} />
-        <EarsLayer skin={cfg.skin} />
-        <BrowsLayer style={cfg.brows} />
-        <EyesLayer style={cfg.eyes} />
-        <MouthLayer style={cfg.mouth} />
-        <EyewearLayer style={cfg.eyewear} />
-        <HairFront style={cfg.hair} color={cfg.hairColor} />
-        <HeadwearLayer style={cfg.headwear} color={cfg.headwearColor} />
+        {isHuman(cfg.kind) ? (
+          <>
+            <HairBack style={cfg.hair} color={cfg.hairColor} />
+            <TopLayer style={cfg.top} color={cfg.topColor} />
+            <Neck skin={cfg.skin} />
+            <NeckwearLayer style={cfg.neckwear} color={cfg.neckwearColor} />
+            <FaceLayer shape={cfg.face} skin={cfg.skin} />
+            <EarsLayer skin={cfg.skin} />
+            <BrowsLayer style={cfg.brows} />
+            <EyesLayer style={cfg.eyes} />
+            <MouthLayer style={cfg.mouth} />
+            <EyewearLayer style={cfg.eyewear} />
+            <HairFront style={cfg.hair} color={cfg.hairColor} />
+            <HeadwearLayer style={cfg.headwear} color={cfg.headwearColor} />
+          </>
+        ) : (
+          <CreatureCharacter kind={cfg.kind} bodyColor={cfg.bodyColor} eyes={cfg.eyes} />
+        )}
       </g>
 
       {/* Ring i personlig färg (identitet i kalendern) */}

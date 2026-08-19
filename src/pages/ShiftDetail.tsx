@@ -10,7 +10,7 @@ import { useToast } from '../components/Toast'
 import { Modal, ConfirmDialog } from '../components/Modal'
 import { Avatar } from '../components/Avatar'
 import { memberColor } from '../lib/memberColor'
-import { Badge, Button, Card, EmptyState, Field, Input, LoadingState, Textarea } from '../components/ui'
+import { Badge, Button, Card, EmptyState, Field, Input, LoadingState, Select, Textarea } from '../components/ui'
 import { formatDate, formatTime, toDatetimeLocal } from '../lib/format'
 
 export function ShiftDetail() {
@@ -19,7 +19,7 @@ export function ShiftDetail() {
   const toast = useToast()
   const qc = useQueryClient()
   const { user, isAdmin } = useAuth()
-  const { map } = useProfiles()
+  const { profiles, map } = useProfiles()
 
   const shiftQuery = useShift(id)
   const [busy, setBusy] = useState(false)
@@ -47,6 +47,7 @@ export function ShiftDetail() {
   const shift = shiftQuery.data
   const mine = !!user && shift.bookings.includes(user.id)
   const full = shift.bookings.length >= shift.capacity
+  const free = shift.capacity - shift.bookings.length
   const canManage = isAdmin || shift.created_by === user?.id
   const booked = shift.bookings.map((uid) => map[uid]).filter(Boolean)
 
@@ -66,6 +67,16 @@ export function ShiftDetail() {
     setBusy(false)
     if (res.error) return toast.error(res.error)
     toast.success(targetUserId === user?.id ? 'Du har avbokat passet.' : 'Medlemmen har avbokats.')
+    invalidate()
+  }
+
+  async function handleAddMember(memberId: string) {
+    if (!memberId) return
+    setBusy(true)
+    const res = await bookShift(id!, memberId)
+    setBusy(false)
+    if (res.error) return toast.error(res.error)
+    toast.success('Medlemmen har bokats in.')
     invalidate()
   }
 
@@ -154,6 +165,24 @@ export function ShiftDetail() {
                 )}
               </Card>
             ))}
+          </div>
+        )}
+
+        {canManage && free > 0 && (
+          <div className="mt-3">
+            <Select
+              value=""
+              onChange={(e) => handleAddMember(e.target.value)}
+              disabled={busy}
+              aria-label="Lägg till medlem"
+            >
+              <option value="">+ Lägg till medlem…</option>
+              {profiles
+                .filter((p) => p.active && !shift.bookings.includes(p.id))
+                .map((p) => (
+                  <option key={p.id} value={p.id}>{p.name || p.email}</option>
+                ))}
+            </Select>
           </div>
         )}
       </div>

@@ -171,6 +171,18 @@ export function HairBack({ style, color }: { style: string; color: string }): Re
       )
     case 'afro':
       return <circle cx="50" cy="34" r="26" fill={c} />
+    case 'wavy':
+      return <path d="M24 40 C24 20 76 20 76 40 C78 54 73 68 72 76 C71 64 70 52 70 44 C70 30 30 30 30 44 C30 52 29 64 28 76 C27 68 22 54 24 40 Z" fill={c} />
+    case 'braids':
+      return (
+        <g fill={c}>
+          <path d="M25 42 C25 22 75 22 75 42 L73 47 C73 33 27 33 27 47 Z" />
+          <ellipse cx="27" cy="53" rx="5" ry="7" /><ellipse cx="27" cy="63" rx="4.5" ry="6" /><ellipse cx="27" cy="72" rx="4" ry="5" />
+          <ellipse cx="73" cy="53" rx="5" ry="7" /><ellipse cx="73" cy="63" rx="4.5" ry="6" /><ellipse cx="73" cy="72" rx="4" ry="5" />
+        </g>
+      )
+    case 'updo':
+      return <ellipse cx="50" cy="21" rx="11" ry="8" fill={c} />
     default:
       return null
   }
@@ -224,6 +236,14 @@ export function HairFront({ style, color }: { style: string; color: string }): R
       return null
     case 'mohawk':
       return <path d="M45 20 L55 20 L57 40 C54 34 46 34 43 40 Z" fill={c} />
+    case 'wavy':
+      return <path d="M27 42 C27 22 73 22 73 42 C69 33 62 34 56 34 C53 29 47 29 44 34 C38 34 31 33 27 42 Z" fill={c} />
+    case 'braids':
+      return <path d="M28 40 C28 22 72 22 72 40 C67 33 60 33 54 34 C51 29 44 30 41 34 C35 34 32 35 28 40 Z" fill={c} />
+    case 'pixie':
+      return <path d="M28 40 C28 23 72 23 72 41 C70 34 60 33 56 33 C54 30 40 29 40 34 C36 33 31 34 28 40 Z" fill={c} stroke={edge} strokeWidth="0.6" />
+    case 'updo':
+      return <path d="M29 41 C29 26 71 26 71 41 C66 34 34 34 29 41 Z" fill={c} />
     default:
       return null
   }
@@ -283,6 +303,28 @@ export function TopLayer({ style, color }: { style: string; color: string }): Re
         <g>
           <path d="M22 100 C22 84 34 76 50 76 C66 76 78 84 78 100 Z" fill={c} />
           <path d="M40 78 C42 84 44 88 44 100 M60 78 C58 84 56 88 56 100" stroke={dark} strokeWidth="1" fill="none" />
+        </g>
+      )
+    case 'dress':
+      return (
+        <g>
+          <path d={base} fill={c} />
+          <path d="M43 75 C46 82 54 82 57 75" stroke={dark} strokeWidth="1.4" fill="none" />
+          <path d="M28 93 C40 97 60 97 72 93" stroke={dark} strokeWidth="1.2" fill="none" />
+        </g>
+      )
+    case 'turtleneck':
+      return (
+        <g>
+          <path d={base} fill={c} />
+          <path d="M41 74 C41 70 59 70 59 74 L59 80 C55 84 45 84 41 80 Z" fill={c} stroke={dark} strokeWidth="0.8" />
+        </g>
+      )
+    case 'stripes':
+      return (
+        <g>
+          <path d={base} fill={c} />
+          <path d="M20 79 H80 M18 86 H82 M18 93 H82" stroke="#ffffff" strokeWidth="2.4" opacity="0.7" fill="none" />
         </g>
       )
     default: // tshirt
