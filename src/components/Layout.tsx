@@ -3,11 +3,14 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
 import { Badge, Button, cn } from './ui'
 import { BrandMark } from './BrandMark'
+import { Avatar } from './Avatar'
+import { memberColor } from '../lib/memberColor'
 
 type NavItem = { to: string; label: string; adminOnly?: boolean; end?: boolean }
 
 const NAV: NavItem[] = [
   { to: '/hem', label: 'Hem' },
+  { to: '/kalender', label: 'Kalender' },
   { to: '/loggbok', label: 'Loggbok' },
   { to: '/observation/ny', label: 'Ny observation' },
   { to: '/sok', label: 'Sök' },
@@ -56,6 +59,7 @@ export function Layout() {
               to="/profil"
               className="flex items-center gap-2 text-sm text-brand-100 hover:text-white"
             >
+              <Avatar config={profile?.avatar} size={28} ring={memberColor(profile)} />
               <span className="max-w-[10rem] truncate">{profile?.name || profile?.email}</span>
               {isAdmin && <Badge color="green">Admin</Badge>}
             </NavLink>

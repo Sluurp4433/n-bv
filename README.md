@@ -1,8 +1,13 @@
 # N-BV
 
-Internt medlemsverktyg – loggbok, observationer, fordonsdatabas och sökning.
-Byggd som en statisk webbapp (React) på **GitHub Pages** med **Supabase** som backend.
-Allt gränssnitt är på svenska. All åtkomst kräver inloggning och skyddas av Row Level Security (RLS).
+Internt medlemsverktyg – loggbok, observationer, fordonsdatabas, sökning, **bokningskalender för
+körpass** och **personliga avatarer**. Byggd som en statisk webbapp (React) på **GitHub Pages** med
+**Supabase** som backend. Allt gränssnitt är på svenska. All åtkomst kräver inloggning och skyddas
+av Row Level Security (RLS).
+
+Varje medlem har en visuell identitet: en egen **avatar** (byggs på profilsidan, sparas som
+strukturerad data och renderas som SVG) och en **personlig färg**. Dessa syns på medlemmens körpass
+i kalendern så att man känner igen sina egna pass direkt.
 
 > **Om personuppgifter:** Systemet kan innehålla känsliga uppgifter (t.ex. registreringsnummer och
 > observationer). Ingen data är publik. Samla bara in det som är nödvändigt och följ föreningens

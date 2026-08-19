@@ -14,6 +14,9 @@ import { Vehicles } from './pages/Vehicles'
 import { VehicleDetail } from './pages/VehicleDetail'
 import { SearchPage } from './pages/SearchPage'
 import { Profile } from './pages/Profile'
+import { AvatarEditor } from './pages/AvatarEditor'
+import { Calendar } from './pages/Calendar'
+import { ShiftDetail } from './pages/ShiftDetail'
 import { Admin } from './pages/Admin'
 
 export function App() {
@@ -43,7 +46,10 @@ export function App() {
         <Route path="/fordon" element={<Vehicles />} />
         <Route path="/fordon/:id" element={<VehicleDetail />} />
         <Route path="/sok" element={<SearchPage />} />
+        <Route path="/kalender" element={<Calendar />} />
+        <Route path="/kalender/pass/:id" element={<ShiftDetail />} />
         <Route path="/profil" element={<Profile />} />
+        <Route path="/profil/avatar" element={<AvatarEditor />} />
         <Route
           path="/admin"
           element={

@@ -173,32 +173,106 @@ export type Database = {
       profiles: {
         Row: {
           active: boolean
+          avatar: Json | null
           created_at: string
           email: string | null
           id: string
           name: string | null
+          personal_color: string | null
           role: Database['public']['Enums']['user_role']
           updated_at: string
         }
         Insert: {
           active?: boolean
+          avatar?: Json | null
           created_at?: string
           email?: string | null
           id: string
           name?: string | null
+          personal_color?: string | null
           role?: Database['public']['Enums']['user_role']
           updated_at?: string
         }
         Update: {
           active?: boolean
+          avatar?: Json | null
           created_at?: string
           email?: string | null
           id?: string
           name?: string | null
+          personal_color?: string | null
           role?: Database['public']['Enums']['user_role']
           updated_at?: string
         }
         Relationships: []
+      }
+      shifts: {
+        Row: {
+          capacity: number
+          created_at: string
+          created_by: string | null
+          ends_at: string
+          id: string
+          location: string | null
+          notes: string | null
+          starts_at: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          capacity?: number
+          created_at?: string
+          created_by?: string | null
+          ends_at: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          starts_at: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          capacity?: number
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          starts_at?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      shift_bookings: {
+        Row: {
+          created_at: string
+          id: string
+          shift_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          shift_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          shift_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'shift_bookings_shift_id_fkey'
+            columns: ['shift_id']
+            isOneToOne: false
+            referencedRelation: 'shifts'
+            referencedColumns: ['id']
+          },
+        ]
       }
       vehicles: {
         Row: {
@@ -302,6 +376,8 @@ export type Profile = Tables<'profiles'>
 export type Observation = Tables<'observations'>
 export type LogbookEntry = Tables<'logbook_entries'>
 export type Vehicle = Tables<'vehicles'>
+export type Shift = Tables<'shifts'>
+export type ShiftBooking = Tables<'shift_bookings'>
 export type VehicleOverview = PublicSchema['Views']['vehicle_overview']['Row']
 export type AuditLog = Tables<'audit_logs'>
 export type AppSettings = Tables<'app_settings'>

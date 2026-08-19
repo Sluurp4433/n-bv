@@ -4,6 +4,8 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
 import { useProfiles, creatorName } from '../lib/hooks'
+import { Avatar } from '../components/Avatar'
+import { memberColor } from '../lib/memberColor'
 import { useToast } from '../components/Toast'
 import { Modal } from '../components/Modal'
 import {
@@ -118,8 +120,13 @@ function MembersTab() {
               return (
                 <tr key={p.id} className="align-top">
                   <td className="px-4 py-3">
-                    <div className="font-medium text-slate-800">{p.name || '(namn saknas)'}</div>
-                    <div className="text-xs text-slate-500">{p.email}</div>
+                    <div className="flex items-center gap-3">
+                      <Avatar config={p.avatar} size={36} ring={memberColor(p)} title={p.name || p.email || ''} />
+                      <div>
+                        <div className="font-medium text-slate-800">{p.name || '(namn saknas)'}</div>
+                        <div className="text-xs text-slate-500">{p.email}</div>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <Select
