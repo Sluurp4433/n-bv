@@ -168,6 +168,98 @@ export type Database = {
         }
         Relationships: []
       }
+      persons: {
+        Row: {
+          id: string
+          first_name: string | null
+          last_name: string | null
+          gender: string | null
+          aliases: string[]
+          description: string | null
+          address: string | null
+          city: string | null
+          connections: string | null
+          notes: string | null
+          created_by: string | null
+          updated_by: string | null
+          created_at: string
+          updated_at: string
+          search: unknown | null
+        }
+        Insert: {
+          id?: string
+          first_name?: string | null
+          last_name?: string | null
+          gender?: string | null
+          aliases?: string[]
+          description?: string | null
+          address?: string | null
+          city?: string | null
+          connections?: string | null
+          notes?: string | null
+          created_by?: string | null
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          first_name?: string | null
+          last_name?: string | null
+          gender?: string | null
+          aliases?: string[]
+          description?: string | null
+          address?: string | null
+          city?: string | null
+          connections?: string | null
+          notes?: string | null
+          created_by?: string | null
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      observation_persons: {
+        Row: { created_at: string; observation_id: string; person_id: string }
+        Insert: { created_at?: string; observation_id: string; person_id: string }
+        Update: { created_at?: string; observation_id?: string; person_id?: string }
+        Relationships: []
+      }
+      person_vehicles: {
+        Row: { created_at: string; person_id: string; vehicle_id: string }
+        Insert: { created_at?: string; person_id: string; vehicle_id: string }
+        Update: { created_at?: string; person_id?: string; vehicle_id?: string }
+        Relationships: []
+      }
+      observation_images: {
+        Row: {
+          id: string
+          observation_id: string
+          file_path: string
+          caption: string | null
+          uploaded_by: string | null
+          created_at: string
+          search: unknown | null
+        }
+        Insert: {
+          id?: string
+          observation_id: string
+          file_path: string
+          caption?: string | null
+          uploaded_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          observation_id?: string
+          file_path?: string
+          caption?: string | null
+          uploaded_by?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
@@ -517,5 +609,7 @@ export type DocumentRow = Tables<'documents'>
 export type Announcement = Tables<'announcements'>
 export type SiteSettings = Tables<'site_settings'>
 export type Sponsor = Tables<'sponsors'>
+export type Person = Tables<'persons'>
+export type ObservationImage = Tables<'observation_images'>
 export type UserRole = Enums<'user_role'>
 export type SearchResult = PublicSchema['Functions']['search_all']['Returns'][number]

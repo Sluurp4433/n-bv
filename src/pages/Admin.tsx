@@ -113,7 +113,8 @@ function MembersTab() {
         <Button onClick={() => setCreateOpen(true)}>+ Ny medlem</Button>
       </div>
 
-      <Card className="overflow-hidden">
+      {/* Desktop: tabell */}
+      <Card className="hidden overflow-hidden md:block">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500">
             <tr>
@@ -167,6 +168,42 @@ function MembersTab() {
           </tbody>
         </table>
       </Card>
+
+      {/* Mobil: kort */}
+      <div className="space-y-2 md:hidden">
+        {profiles.map((p) => {
+          const isSelf = p.id === user?.id
+          return (
+            <Card key={p.id} className="p-4">
+              <div className="flex items-center gap-3">
+                <Avatar config={p.avatar} size={40} ring={memberColor(p)} title={p.name || p.email || ''} />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-medium text-slate-800">{p.name || '(namn saknas)'}</div>
+                  <div className="truncate text-xs text-slate-500">{p.email}</div>
+                </div>
+                <Badge color={p.active ? 'green' : 'red'}>{p.active ? 'Aktiv' : 'Inaktiv'}</Badge>
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                <Select
+                  value={p.role}
+                  disabled={isSelf}
+                  onChange={(e) => updateProfile(p.id, { role: e.target.value as Profile['role'] })}
+                  className="flex-1"
+                >
+                  <option value="medlem">Medlem</option>
+                  <option value="styrelse">Styrelse</option>
+                  <option value="admin">Administratör</option>
+                </Select>
+                {!isSelf && (
+                  <Button variant="secondary" onClick={() => updateProfile(p.id, { active: !p.active })}>
+                    {p.active ? 'Inaktivera' : 'Aktivera'}
+                  </Button>
+                )}
+              </div>
+            </Card>
+          )
+        })}
+      </div>
 
       <p className="mt-3 text-xs text-slate-400">
         Du kan inte ändra din egen roll eller inaktivera ditt eget konto (för att undvika utelåsning).
@@ -303,6 +340,13 @@ function AuditTab() {
     logbook_entries: 'loggboksinlägg',
     vehicles: 'fordon',
     profiles: 'medlem',
+    shifts: 'körpass',
+    shift_bookings: 'passbokning',
+    announcements: 'meddelande',
+    documents: 'dokument',
+    sponsors: 'sponsor',
+    persons: 'person',
+    observation_images: 'bild',
   }
 
   if (result.isLoading) return <LoadingState />
@@ -312,7 +356,8 @@ function AuditTab() {
 
   return (
     <div>
-      <Card className="overflow-hidden">
+      {/* Desktop: tabell */}
+      <Card className="hidden overflow-hidden md:block">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500">
             <tr>
@@ -336,6 +381,21 @@ function AuditTab() {
           </tbody>
         </table>
       </Card>
+
+      {/* Mobil: lista */}
+      <div className="space-y-2 md:hidden">
+        {result.data!.rows.map((a) => (
+          <Card key={a.id} className="p-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-medium text-slate-800">
+                {actionLabel[a.action] ?? a.action} {tableLabel[a.table_name] ?? a.table_name}
+              </span>
+              <span className="shrink-0 text-xs text-slate-400">{formatDateTime(a.created_at)}</span>
+            </div>
+            <div className="mt-0.5 text-xs text-slate-500">{creatorName(map, a.user_id)}</div>
+          </Card>
+        ))}
+      </div>
       {total === 0 && <p className="mt-4 text-center text-sm text-slate-400">Ingen historik ännu.</p>}
       {pages > 1 && <Pagination page={page} pages={pages} onChange={setPage} loading={result.isFetching} />}
     </div>
@@ -348,6 +408,7 @@ type PurgeResult = {
   observations: number
   logbook: number
   orphan_vehicles: number
+  orphan_persons: number
   dry_run: boolean
 }
 
@@ -464,7 +525,8 @@ function GdprTab() {
               {preview.dry_run ? 'Förhandsgranskning: ' : 'Gallring klar. '}
               Observationer: <strong>{preview.observations}</strong>, loggbok:{' '}
               <strong>{preview.logbook}</strong>, fordon utan observationer:{' '}
-              <strong>{preview.orphan_vehicles}</strong>.
+              <strong>{preview.orphan_vehicles}</strong>, personer utan observationer:{' '}
+              <strong>{preview.orphan_persons}</strong>.
               <div className="mt-1 text-xs opacity-80">Gräns: {formatDateTime(preview.cutoff)}</div>
             </Alert>
           </div>

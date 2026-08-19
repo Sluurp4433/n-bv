@@ -59,3 +59,44 @@ export async function clearVehicleLinks(observationId: string): Promise<void> {
     .eq('observation_id', observationId)
   if (error) throw error
 }
+
+// ---- Bildbilagor ----
+const IMG_BUCKET = 'observation-images'
+
+/** Laddar upp en bild till en observation med sökbar bildtext. */
+export async function uploadObservationImage(
+  observationId: string,
+  file: File,
+  caption: string,
+  userId: string
+): Promise<{ error?: string }> {
+  const safe = file.name.replace(/[^\w.\-]+/g, '_')
+  const path = `${observationId}/${crypto.randomUUID()}-${safe}`
+  const up = await supabase.storage.from(IMG_BUCKET).upload(path, file, {
+    upsert: false,
+    contentType: file.type || undefined,
+  })
+  if (up.error) return { error: 'Kunde inte ladda upp bilden.' }
+  const { error } = await supabase.from('observation_images').insert({
+    observation_id: observationId,
+    file_path: path,
+    caption: caption || null,
+    uploaded_by: userId,
+  })
+  if (error) {
+    await supabase.storage.from(IMG_BUCKET).remove([path])
+    return { error: 'Kunde inte spara bilden.' }
+  }
+  return {}
+}
+
+export async function observationImageUrl(path: string): Promise<string | null> {
+  const { data, error } = await supabase.storage.from(IMG_BUCKET).createSignedUrl(path, 3600)
+  if (error || !data) return null
+  return data.signedUrl
+}
+
+export async function deleteObservationImage(id: string, filePath: string): Promise<void> {
+  await supabase.from('observation_images').delete().eq('id', id)
+  await supabase.storage.from(IMG_BUCKET).remove([filePath])
+}

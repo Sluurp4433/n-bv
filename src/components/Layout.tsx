@@ -13,6 +13,7 @@ const NAV: NavItem[] = [
   { to: '/kalender', label: 'Kalender' },
   { to: '/loggbok', label: 'Loggbok' },
   { to: '/fordon', label: 'Fordon' },
+  { to: '/personer', label: 'Personer' },
   { to: '/information', label: 'Information' },
   { to: '/sok', label: 'Sök' },
   { to: '/admin', label: 'Administration', adminOnly: true },

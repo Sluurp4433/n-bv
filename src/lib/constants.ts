@@ -42,6 +42,16 @@ export const VEHICLE_TYPES = [
   'Annat',
 ] as const
 
+export const GENDERS = [
+  { value: 'man', label: 'Man' },
+  { value: 'kvinna', label: 'Kvinna' },
+  { value: 'okant', label: 'Okänt' },
+] as const
+
 export function priorityLabel(value: string | null | undefined): string {
   return PRIORITIES.find((p) => p.value === value)?.label ?? 'Normal'
+}
+
+export function genderLabel(value: string | null | undefined): string {
+  return GENDERS.find((g) => g.value === value)?.label ?? ''
 }

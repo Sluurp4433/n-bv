@@ -8,6 +8,7 @@ import type { SearchResult } from '../types/database.types'
 
 const GROUPS: { type: string; label: string; path: (id: string) => string; emoji: string }[] = [
   { type: 'fordon', label: 'Fordon', path: (id) => `/fordon/${id}`, emoji: '🚗' },
+  { type: 'person', label: 'Personer', path: (id) => `/personer/${id}`, emoji: '🧑' },
   { type: 'observation', label: 'Observationer', path: (id) => `/observation/${id}`, emoji: '📝' },
   { type: 'loggbok', label: 'Loggbok', path: (id) => `/loggbok/${id}`, emoji: '📖' },
 ]

@@ -13,6 +13,8 @@ import { ObservationDetail } from './pages/ObservationDetail'
 import { Vehicles } from './pages/Vehicles'
 import { VehicleDetail } from './pages/VehicleDetail'
 import { SearchPage } from './pages/SearchPage'
+import { Persons } from './pages/Persons'
+import { PersonDetail } from './pages/PersonDetail'
 import { Information } from './pages/Information'
 import { Profile } from './pages/Profile'
 import { AvatarEditor } from './pages/AvatarEditor'
@@ -47,6 +49,8 @@ export function App() {
         <Route path="/information" element={<Information />} />
         <Route path="/fordon" element={<Vehicles />} />
         <Route path="/fordon/:id" element={<VehicleDetail />} />
+        <Route path="/personer" element={<Persons />} />
+        <Route path="/personer/:id" element={<PersonDetail />} />
         <Route path="/sok" element={<SearchPage />} />
         <Route path="/kalender" element={<Calendar />} />
         <Route path="/kalender/pass/:id" element={<ShiftDetail />} />

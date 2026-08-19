@@ -9,7 +9,9 @@ import { ConfirmDialog } from '../components/Modal'
 import { Badge, Button, Card, EmptyState, LoadingState } from '../components/ui'
 import { formatDateTime } from '../lib/format'
 import { priorityLabel } from '../lib/constants'
-import type { Vehicle } from '../types/database.types'
+import { observationImageUrl } from '../lib/observations'
+import { personName } from '../lib/persons'
+import type { Person, Vehicle } from '../types/database.types'
 
 export function ObservationDetail() {
   const { id } = useParams()
@@ -32,7 +34,21 @@ export function ObservationDetail() {
         .select('vehicles(*)')
         .eq('observation_id', id!)
       const vehicles = (links ?? []).map((l) => l.vehicles as unknown as Vehicle).filter(Boolean)
-      return { obs, vehicles }
+
+      const { data: plinks } = await supabase
+        .from('observation_persons')
+        .select('persons(*)')
+        .eq('observation_id', id!)
+      const persons = (plinks ?? []).map((l) => l.persons as unknown as Person).filter(Boolean)
+
+      const { data: imgRows } = await supabase
+        .from('observation_images')
+        .select('id,file_path,caption')
+        .eq('observation_id', id!)
+      const images = await Promise.all(
+        (imgRows ?? []).map(async (im) => ({ id: im.id, caption: im.caption, url: await observationImageUrl(im.file_path) }))
+      )
+      return { obs, vehicles, persons, images }
     },
   })
 
@@ -49,7 +65,7 @@ export function ObservationDetail() {
       />
     )
 
-  const { obs, vehicles } = query.data
+  const { obs, vehicles, persons, images } = query.data
   const canEdit = canEditOwn(obs.created_by, obs.created_at, user?.id, isAdmin, settings?.edit_window_hours)
   const priorityColor = obs.priority === 'hog' ? 'red' : obs.priority === 'lag' ? 'slate' : 'blue'
 
@@ -145,6 +161,45 @@ export function ObservationDetail() {
           </div>
         )}
       </div>
+
+      {/* Relaterade personer */}
+      <div className="mt-6">
+        <h2 className="mb-2 font-semibold text-brand-800">Relaterade personer</h2>
+        {persons.length === 0 ? (
+          <p className="text-sm text-slate-400">Ingen person kopplad till observationen.</p>
+        ) : (
+          <div className="space-y-2">
+            {persons.map((p) => (
+              <Link key={p.id} to={`/personer/${p.id}`}>
+                <Card className="flex items-center justify-between p-4 transition-shadow hover:shadow-md">
+                  <div>
+                    <div className="font-semibold text-brand-700">{personName(p)}</div>
+                    <div className="text-sm text-slate-500">
+                      {[p.city, p.description].filter(Boolean).join(' · ') || 'Inga detaljer'}
+                    </div>
+                  </div>
+                  <span className="text-slate-400">›</span>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Bilder */}
+      {images.length > 0 && (
+        <div className="mt-6">
+          <h2 className="mb-2 font-semibold text-brand-800">Bilder</h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {images.map((im) => (
+              <a key={im.id} href={im.url ?? undefined} target="_blank" rel="noopener" className="block rounded-lg border border-slate-200 p-2">
+                {im.url ? <img src={im.url} alt={im.caption ?? ''} className="h-28 w-full rounded object-cover" /> : <div className="h-28 rounded bg-slate-100" />}
+                {im.caption && <div className="mt-1 truncate text-xs text-slate-600">{im.caption}</div>}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         open={confirmOpen}
