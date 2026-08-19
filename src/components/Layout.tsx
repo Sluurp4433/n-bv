@@ -12,7 +12,6 @@ const NAV: NavItem[] = [
   { to: '/hem', label: 'Hem' },
   { to: '/kalender', label: 'Kalender' },
   { to: '/loggbok', label: 'Loggbok' },
-  { to: '/observationer', label: 'Observationer' },
   { to: '/fordon', label: 'Fordon' },
   { to: '/information', label: 'Information' },
   { to: '/sok', label: 'Sök' },

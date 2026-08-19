@@ -23,10 +23,18 @@ export function CreatureCharacter({
     case 'rabbit': return <Rabbit c={c} eyes={eyes} />
     case 'owl': return <Owl c={c} />
     case 'panda': return <Panda />
+    case 'mouse': return <Mouse c={c} eyes={eyes} />
+    case 'squirrel': return <Squirrel c={c} eyes={eyes} />
+    case 'raccoon': return <Raccoon c={c} eyes={eyes} />
+    case 'crocodile': return <Crocodile eyes={eyes} />
+    case 'eagle': return <Eagle c={c} eyes={eyes} />
     case 'bee': return <Bee c={c} eyes={eyes} />
     case 'ladybug': return <Ladybug c={c} />
     case 'butterfly': return <Butterfly c={c} eyes={eyes} />
     case 'ant': return <Ant c={c} />
+    case 'octopus': return <Octopus c={c} eyes={eyes} />
+    case 'alien': return <Alien eyes={eyes} />
+    case 'robot': return <Robot c={c} />
     default: return <Cat c={c} eyes={eyes} />
   }
 }
@@ -234,6 +242,163 @@ function Ant({ c }: { c: string }) {
       <circle cx="44" cy="26" r="3" fill="#fff" /><circle cx="56" cy="26" r="3" fill="#fff" />
       <circle cx="44" cy="26" r="1.5" fill={INK} /><circle cx="56" cy="26" r="1.5" fill={INK} />
       <path d="M45 32 Q50 36 55 32" stroke={INK} strokeWidth="1.3" fill="none" strokeLinecap="round" />
+    </>
+  )
+}
+
+function Mouse({ c, eyes }: { c: string; eyes: string }) {
+  const line = darken(c, 0.2)
+  return (
+    <>
+      <circle cx="27" cy="30" r="15" fill={c} stroke={line} strokeWidth="1" />
+      <circle cx="73" cy="30" r="15" fill={c} stroke={line} strokeWidth="1" />
+      <circle cx="27" cy="30" r="9" fill="#f0b9c4" />
+      <circle cx="73" cy="30" r="9" fill="#f0b9c4" />
+      <circle cx="50" cy="54" r="24" fill={c} stroke={line} strokeWidth="1" />
+      <EyesLayer style={eyes} />
+      <ellipse cx="50" cy="61" rx="4" ry="3" fill="#e07a99" />
+      <path d="M50 64 L50 68" stroke={INK} strokeWidth="1.2" strokeLinecap="round" />
+      <g stroke={INK} strokeWidth="0.7" opacity="0.5">
+        <line x1="20" y1="60" x2="34" y2="60" /><line x1="21" y1="66" x2="34" y2="64" />
+        <line x1="80" y1="60" x2="66" y2="60" /><line x1="79" y1="66" x2="66" y2="64" />
+      </g>
+    </>
+  )
+}
+
+function Squirrel({ c, eyes }: { c: string; eyes: string }) {
+  const line = darken(c, 0.2)
+  const belly = lighten(c, 0.45)
+  return (
+    <>
+      <path d="M70 78 C96 74 94 28 68 30 C86 36 82 58 62 58 C74 64 72 74 70 78 Z" fill={c} stroke={line} strokeWidth="1" />
+      <path d="M34 34 L30 16 L44 28 Z" fill={c} stroke={line} strokeWidth="1" />
+      <path d="M66 34 L70 16 L56 28 Z" fill={c} stroke={line} strokeWidth="1" />
+      <circle cx="48" cy="52" r="24" fill={c} stroke={line} strokeWidth="1" />
+      <ellipse cx="48" cy="60" rx="13" ry="11" fill={belly} />
+      <EyesLayer style={eyes} />
+      <ellipse cx="48" cy="58" rx="3.6" ry="3" fill={INK} />
+      <path d="M45 65 L45 61 L51 61 L51 65" stroke={INK} strokeWidth="1" fill="none" />
+      <rect x="45" y="61" width="6" height="5" rx="1" fill="#fff" stroke={INK} strokeWidth="0.5" />
+    </>
+  )
+}
+
+function Raccoon({ c, eyes }: { c: string; eyes: string }) {
+  const base = c === '#f2ede4' ? '#9aa0a8' : c
+  const line = darken(base, 0.2)
+  const light = lighten(base, 0.5)
+  return (
+    <>
+      <path d="M30 34 L26 18 L42 28 Z" fill={base} stroke={line} strokeWidth="1" />
+      <path d="M70 34 L74 18 L58 28 Z" fill={base} stroke={line} strokeWidth="1" />
+      <circle cx="50" cy="52" r="26" fill={base} stroke={line} strokeWidth="1" />
+      <path d="M28 46 C34 40 44 40 46 48 C47 54 41 58 34 56 C29 54 26 50 28 46 Z" fill="#2b2320" />
+      <path d="M72 46 C66 40 56 40 54 48 C53 54 59 58 66 56 C71 54 74 50 72 46 Z" fill="#2b2320" />
+      <path d="M40 60 C40 72 60 72 60 60 C58 68 42 68 40 60 Z" fill={light} />
+      <circle cx="41" cy="48" r="3.2" fill="#fff" /><circle cx="59" cy="48" r="3.2" fill="#fff" />
+      <circle cx="41" cy="48" r="1.6" fill={INK} /><circle cx="59" cy="48" r="1.6" fill={INK} />
+      {void eyes}
+      {nose(50, 60, '#2b2320')}
+      <path d="M50 63 Q46 67 43 65 M50 63 Q54 67 57 65" stroke={INK} strokeWidth="1.2" fill="none" strokeLinecap="round" />
+    </>
+  )
+}
+
+function Crocodile({ eyes }: { eyes: string }) {
+  const c = '#4e9a3f'
+  const line = darken(c, 0.22)
+  const belly = lighten(c, 0.35)
+  return (
+    <>
+      <path d="M18 74 L82 74 C86 74 86 60 78 60 L22 60 C14 60 14 74 18 74 Z" fill={c} stroke={line} strokeWidth="1" />
+      <path d="M22 66 h56" stroke={belly} strokeWidth="3" />
+      <g fill="#fff" stroke={line} strokeWidth="0.5">
+        <path d="M26 60 l3 5 3 -5 z" /><path d="M36 60 l3 5 3 -5 z" /><path d="M46 60 l3 5 3 -5 z" /><path d="M56 60 l3 5 3 -5 z" /><path d="M66 60 l3 5 3 -5 z" />
+      </g>
+      <path d="M28 54 C28 34 72 34 72 54 C72 58 68 60 62 60 L38 60 C32 60 28 58 28 54 Z" fill={c} stroke={line} strokeWidth="1" />
+      <circle cx="38" cy="34" r="9" fill={c} stroke={line} strokeWidth="1" />
+      <circle cx="62" cy="34" r="9" fill={c} stroke={line} strokeWidth="1" />
+      <circle cx="38" cy="33" r="4.5" fill="#fff" /><circle cx="62" cy="33" r="4.5" fill="#fff" />
+      <circle cx="38" cy="33" r="2.2" fill={INK} /><circle cx="62" cy="33" r="2.2" fill={INK} />
+      {void eyes}
+      <circle cx="42" cy="52" r="1.6" fill={INK} /><circle cx="58" cy="52" r="1.6" fill={INK} />
+    </>
+  )
+}
+
+function Eagle({ c, eyes }: { c: string; eyes: string }) {
+  const body = c === '#f2ede4' ? '#7a5230' : darken(c, 0.05)
+  const line = darken(body, 0.25)
+  return (
+    <>
+      <path d="M20 46 Q10 42 8 52 M80 46 Q90 42 92 52" stroke={body} strokeWidth="6" fill="none" strokeLinecap="round" />
+      <circle cx="50" cy="56" r="26" fill={body} stroke={line} strokeWidth="1" />
+      <path d="M50 22 C74 22 78 44 72 56 C66 44 34 44 28 56 C22 44 26 22 50 22 Z" fill="#f4f1ea" stroke="#d8d5cd" strokeWidth="1" />
+      <EyesLayer style={eyes} />
+      <path d="M38 40 L47 44 M62 40 L53 44" stroke={INK} strokeWidth="2" strokeLinecap="round" />
+      <path d="M44 52 L56 52 L52 60 Q50 63 48 60 Z" fill="#e0a800" stroke={darken('#e0a800', 0.2)} strokeWidth="0.6" />
+      <path d="M48 60 Q50 64 52 60" fill="#e0a800" />
+    </>
+  )
+}
+
+function Octopus({ c, eyes }: { c: string; eyes: string }) {
+  const body = c === '#f2ede4' ? '#d6497e' : c
+  const line = darken(body, 0.2)
+  const cheek = lighten(body, 0.3)
+  return (
+    <>
+      <g fill={body} stroke={line} strokeWidth="0.5">
+        <path d="M24 60 C18 76 12 78 10 88 C16 86 20 82 26 74 Z" />
+        <path d="M34 66 C30 80 26 86 24 92 C30 88 34 82 38 74 Z" />
+        <path d="M50 68 C50 82 48 88 48 94 C52 88 54 82 54 70 Z" />
+        <path d="M66 66 C70 80 74 86 76 92 C70 88 66 82 62 74 Z" />
+        <path d="M76 60 C82 76 88 78 90 88 C84 86 80 82 74 74 Z" />
+      </g>
+      <path d="M22 52 C22 28 78 28 78 52 C78 66 66 72 50 72 C34 72 22 66 22 52 Z" fill={body} stroke={line} strokeWidth="1" />
+      <circle cx="38" cy="58" r="4" fill={cheek} opacity="0.7" /><circle cx="62" cy="58" r="4" fill={cheek} opacity="0.7" />
+      <g transform="translate(0,2)"><EyesLayer style={eyes} /></g>
+      <path d="M44 60 Q50 66 56 60" stroke={INK} strokeWidth="1.6" fill="none" strokeLinecap="round" />
+    </>
+  )
+}
+
+function Alien({ eyes }: { eyes: string }) {
+  const c = '#7ec87e'
+  const line = darken(c, 0.22)
+  return (
+    <>
+      <path d="M40 20 Q36 10 42 8 M60 20 Q64 10 58 8" stroke={line} strokeWidth="1.6" fill="none" strokeLinecap="round" />
+      <circle cx="42" cy="7" r="3" fill={c} stroke={line} strokeWidth="0.6" />
+      <circle cx="58" cy="7" r="3" fill={c} stroke={line} strokeWidth="0.6" />
+      <path d="M50 22 C74 22 76 46 68 62 C62 74 54 78 50 78 C46 78 38 74 32 62 C24 46 26 22 50 22 Z" fill={c} stroke={line} strokeWidth="1" />
+      <ellipse cx="39" cy="48" rx="7" ry="11" fill="#12131a" transform="rotate(18 39 48)" />
+      <ellipse cx="61" cy="48" rx="7" ry="11" fill="#12131a" transform="rotate(-18 61 48)" />
+      <circle cx="41" cy="44" r="1.8" fill="#fff" /><circle cx="59" cy="44" r="1.8" fill="#fff" />
+      {void eyes}
+      <path d="M45 66 Q50 69 55 66" stroke={line} strokeWidth="1.4" fill="none" strokeLinecap="round" />
+    </>
+  )
+}
+
+function Robot({ c }: { c: string }) {
+  const metal = c === '#f2ede4' ? '#b8c0cc' : c
+  const line = darken(metal, 0.28)
+  const dark = darken(metal, 0.16)
+  return (
+    <>
+      <line x1="50" y1="24" x2="50" y2="14" stroke={line} strokeWidth="2" />
+      <circle cx="50" cy="12" r="3.5" fill="#e0554f" />
+      <rect x="22" y="46" width="6" height="12" rx="2" fill={dark} />
+      <rect x="72" y="46" width="6" height="12" rx="2" fill={dark} />
+      <rect x="26" y="26" width="48" height="48" rx="12" fill={metal} stroke={line} strokeWidth="1.5" />
+      <rect x="32" y="38" width="36" height="18" rx="6" fill="#1a2230" />
+      <circle cx="42" cy="47" r="5" fill="#5cd6e0" /><circle cx="58" cy="47" r="5" fill="#5cd6e0" />
+      <circle cx="42" cy="47" r="2" fill="#0b3a40" /><circle cx="58" cy="47" r="2" fill="#0b3a40" />
+      <g stroke={line} strokeWidth="1.4">
+        <line x1="38" y1="64" x2="62" y2="64" /><line x1="43" y1="61" x2="43" y2="67" /><line x1="50" y1="61" x2="50" y2="67" /><line x1="57" y1="61" x2="57" y2="67" />
+      </g>
     </>
   )
 }

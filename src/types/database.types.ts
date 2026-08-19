@@ -108,6 +108,66 @@ export type Database = {
         }
         Relationships: []
       }
+      site_settings: {
+        Row: {
+          display_name: string
+          id: number
+          logo_path: string | null
+          tagline: string | null
+          tip_phone: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          display_name?: string
+          id?: number
+          logo_path?: string | null
+          tagline?: string | null
+          tip_phone?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          display_name?: string
+          id?: number
+          logo_path?: string | null
+          tagline?: string | null
+          tip_phone?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      sponsors: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          logo_path: string | null
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          logo_path?: string | null
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          logo_path?: string | null
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
@@ -455,5 +515,7 @@ export type AuditLog = Tables<'audit_logs'>
 export type AppSettings = Tables<'app_settings'>
 export type DocumentRow = Tables<'documents'>
 export type Announcement = Tables<'announcements'>
+export type SiteSettings = Tables<'site_settings'>
+export type Sponsor = Tables<'sponsors'>
 export type UserRole = Enums<'user_role'>
 export type SearchResult = PublicSchema['Functions']['search_all']['Returns'][number]

@@ -139,9 +139,48 @@ export function MouthLayer({ style }: { style: string }): ReactNode {
   }
 }
 
+/* ---------- Ansiktsbehåring ---------- */
+export function FacialHairLayer({ style, color }: { style: string; color: string }): ReactNode {
+  if (style === 'none') return null
+  const c = hairHex(color)
+  const must = <path d="M41 55 Q50 51 59 55 Q54 60 50 57.5 Q46 60 41 55 Z" fill={c} />
+  switch (style) {
+    case 'mustache':
+      return must
+    case 'stubble':
+      return (
+        <path d="M31 50 C31 69 41 77 50 77 C59 77 69 69 69 50 C64 61 58 63 50 63 C42 63 36 61 31 50 Z" fill={c} opacity="0.28" />
+      )
+    case 'goatee':
+      return (
+        <g>
+          {must}
+          <path d="M45 61 C45 70 55 70 55 61 C54 66 46 66 45 61 Z" fill={c} />
+        </g>
+      )
+    case 'beard':
+      return (
+        <g>
+          <path d="M30 49 C30 69 40 78 50 78 C60 78 70 69 70 49 C65 61 58 63 50 63 C42 63 35 61 30 49 Z" fill={c} />
+          {must}
+        </g>
+      )
+    default:
+      return null
+  }
+}
+
 /* ---------- Glasögon ---------- */
 export function EyewearLayer({ style }: { style: string }): ReactNode {
   if (style === 'none') return null
+  if (style === 'monocle') {
+    return (
+      <g stroke={INK} strokeWidth="1.4" fill="none">
+        <circle cx="59" cy="47" r="7" />
+        <path d="M59 54 Q56 62 52 66" />
+      </g>
+    )
+  }
   const fill = style === 'sunglasses' ? '#20242b' : 'none'
   return (
     <g stroke={INK} strokeWidth="1.4" fill={fill}>
@@ -367,6 +406,16 @@ export function HeadwearLayer({ style, color }: { style: string; color: string }
       )
     case 'headband':
       return <path d="M27 38 C34 33 66 33 73 38 L73 42 C66 37 34 37 27 42 Z" fill={c} />
+    case 'bandana':
+      return (
+        <g>
+          <path d="M26 40 C26 23 74 23 74 40 C66 32 34 32 26 40 Z" fill={c} />
+          <path d="M72 37 L84 33 L80 43 Z" fill={dark} />
+          <g fill="#ffffff" opacity="0.6">
+            <circle cx="38" cy="32" r="1.4" /><circle cx="50" cy="29" r="1.4" /><circle cx="62" cy="32" r="1.4" />
+          </g>
+        </g>
+      )
     default:
       return null
   }

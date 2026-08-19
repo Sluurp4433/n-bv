@@ -116,10 +116,24 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
   }
 )
 
+const chevronSvg =
+  "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='#94a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>"
+const chevronUrl = `url("data:image/svg+xml,${encodeURIComponent(chevronSvg)}")`
+
 export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(
   function Select({ className, children, ...rest }, ref) {
     return (
-      <select ref={ref} className={cn(inputBase, 'pr-8', className)} {...rest}>
+      <select
+        ref={ref}
+        className={cn(inputBase, 'appearance-none pr-9', className)}
+        {...rest}
+        style={{
+          backgroundImage: chevronUrl,
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'right 0.65rem center',
+          ...rest.style,
+        }}
+      >
         {children}
       </select>
     )

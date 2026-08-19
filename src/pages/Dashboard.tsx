@@ -108,7 +108,7 @@ export function Dashboard() {
         <Card className="p-5">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-semibold text-brand-800">Senaste observationer</h2>
-            <Link to="/observationer" className="text-sm text-brand-600 hover:underline">
+            <Link to="/loggbok" className="text-sm text-brand-600 hover:underline">
               Visa alla
             </Link>
           </div>

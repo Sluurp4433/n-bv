@@ -19,13 +19,15 @@ import {
   PageHeader,
   Select,
   Textarea,
+  cn,
 } from '../components/ui'
 import { formatDateTime } from '../lib/format'
 import { ANNOUNCEMENT_LEVELS, levelLabel, useAllAnnouncements } from '../lib/announcements'
+import { publicAssetUrl, removePublicAsset, uploadPublicAsset, useSiteSettings, useSponsors } from '../lib/site'
 import { Pagination } from './Logbook'
-import type { AuditLog, Profile, Announcement } from '../types/database.types'
+import type { AuditLog, Profile, Announcement, Sponsor } from '../types/database.types'
 
-type Tab = 'medlemmar' | 'driftinfo' | 'audit' | 'gdpr'
+type Tab = 'medlemmar' | 'startsida' | 'driftinfo' | 'audit' | 'gdpr'
 
 async function invokeFunction<T>(
   name: string,
@@ -50,6 +52,7 @@ export function Admin() {
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'medlemmar', label: 'Medlemmar' },
+    { id: 'startsida', label: 'Startsida' },
     { id: 'driftinfo', label: 'Driftinfo' },
     { id: 'audit', label: 'Ändringslogg' },
     { id: 'gdpr', label: 'GDPR & gallring' },
@@ -77,6 +80,7 @@ export function Admin() {
       </div>
 
       {tab === 'medlemmar' && <MembersTab />}
+      {tab === 'startsida' && <SiteTab />}
       {tab === 'driftinfo' && <AnnouncementsTab />}
       {tab === 'audit' && <AuditTab />}
       {tab === 'gdpr' && <GdprTab />}
@@ -258,6 +262,7 @@ function CreateMemberModal({
           <Field label="Roll" htmlFor="c-role">
             <Select id="c-role" {...register('role')}>
               <option value="medlem">Medlem</option>
+              <option value="styrelse">Styrelse</option>
               <option value="admin">Administratör</option>
             </Select>
           </Field>
@@ -557,6 +562,167 @@ function AnnouncementsTab() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  )
+}
+
+/* ---------------- Startsida & sponsorer ---------------- */
+function SiteTab() {
+  const toast = useToast()
+  const qc = useQueryClient()
+  const site = useSiteSettings()
+  const sponsors = useSponsors(false)
+  const [logoBusy, setLogoBusy] = useState(false)
+  const [spName, setSpName] = useState('')
+  const [spFile, setSpFile] = useState<File | null>(null)
+  const [spBusy, setSpBusy] = useState(false)
+
+  const { register, handleSubmit, reset, formState } = useForm<{ display_name: string; tagline: string; tip_phone: string }>()
+
+  useEffect(() => {
+    if (site.data) {
+      reset({
+        display_name: site.data.display_name ?? 'N-BV',
+        tagline: site.data.tagline ?? '',
+        tip_phone: site.data.tip_phone ?? '',
+      })
+    }
+  }, [site.data, reset])
+
+  async function saveSettings(v: { display_name: string; tagline: string; tip_phone: string }) {
+    const { error } = await supabase
+      .from('site_settings')
+      .update({ display_name: v.display_name || 'N-BV', tagline: v.tagline || null, tip_phone: v.tip_phone || null })
+      .eq('id', 1)
+    if (error) return toast.error('Kunde inte spara.')
+    qc.invalidateQueries({ queryKey: ['site_settings'] })
+    toast.success('Startsidan har uppdaterats.')
+  }
+
+  async function onLogoChange(file: File | null) {
+    if (!file) return
+    setLogoBusy(true)
+    const up = await uploadPublicAsset(file, 'logo')
+    if (up.error || !up.path) {
+      setLogoBusy(false)
+      return toast.error(up.error ?? 'Kunde inte ladda upp loggan.')
+    }
+    const old = site.data?.logo_path
+    const { error } = await supabase.from('site_settings').update({ logo_path: up.path }).eq('id', 1)
+    setLogoBusy(false)
+    if (error) return toast.error('Kunde inte spara loggan.')
+    if (old) await removePublicAsset(old)
+    qc.invalidateQueries({ queryKey: ['site_settings'] })
+    toast.success('Loggan har uppdaterats.')
+  }
+
+  async function addSponsor() {
+    if (!spName.trim() || !spFile) return toast.error('Ange namn och välj en logga.')
+    setSpBusy(true)
+    const up = await uploadPublicAsset(spFile, 'sponsors')
+    if (up.error || !up.path) {
+      setSpBusy(false)
+      return toast.error(up.error ?? 'Kunde inte ladda upp.')
+    }
+    const { error } = await supabase.from('sponsors').insert({ name: spName.trim(), logo_path: up.path })
+    setSpBusy(false)
+    if (error) {
+      await removePublicAsset(up.path)
+      return toast.error('Kunde inte spara sponsorn.')
+    }
+    setSpName('')
+    setSpFile(null)
+    qc.invalidateQueries({ queryKey: ['sponsors'] })
+    toast.success('Sponsorn har lagts till.')
+  }
+
+  async function toggleSponsor(s: Sponsor) {
+    const { error } = await supabase.from('sponsors').update({ active: !s.active }).eq('id', s.id)
+    if (error) return toast.error('Kunde inte uppdatera.')
+    qc.invalidateQueries({ queryKey: ['sponsors'] })
+  }
+
+  async function removeSponsor(s: Sponsor) {
+    const { error } = await supabase.from('sponsors').delete().eq('id', s.id)
+    if (error) return toast.error('Kunde inte ta bort.')
+    await removePublicAsset(s.logo_path)
+    qc.invalidateQueries({ queryKey: ['sponsors'] })
+    toast.success('Sponsorn har tagits bort.')
+  }
+
+  const logoUrl = publicAssetUrl(site.data?.logo_path)
+
+  return (
+    <div className="space-y-4">
+      <Card className="p-5">
+        <h2 className="font-semibold text-brand-800">Startsidans innehåll</h2>
+        <p className="mt-1 text-sm text-slate-500">Visas publikt på inloggningssidan.</p>
+
+        <div className="mt-4 flex items-center gap-4">
+          <div className="flex h-20 w-20 items-center justify-center rounded-lg border border-slate-200 bg-slate-50">
+            {logoUrl ? <img src={logoUrl} alt="Logga" className="h-full w-full object-contain p-1" /> : <span className="text-xs text-slate-400">Ingen logga</span>}
+          </div>
+          <label className="cursor-pointer">
+            <span className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-medium text-white hover:bg-brand-800">
+              {logoBusy ? 'Laddar upp…' : 'Byt logga'}
+            </span>
+            <input type="file" accept="image/*" className="hidden" onChange={(e) => onLogoChange(e.target.files?.[0] ?? null)} />
+          </label>
+        </div>
+
+        <form onSubmit={handleSubmit(saveSettings)} className="mt-4 space-y-3">
+          <Field label="Föreningsnamn" htmlFor="s-name">
+            <Input id="s-name" {...register('display_name')} placeholder="N-BV" />
+          </Field>
+          <Field label="Undertext" htmlFor="s-tag">
+            <Input id="s-tag" {...register('tagline')} placeholder="Tryggare tillsammans." />
+          </Field>
+          <Field label="Tipstelefon" htmlFor="s-tip" hint="Visas stort på inloggningssidan.">
+            <Input id="s-tip" {...register('tip_phone')} placeholder="070-123 45 67" />
+          </Field>
+          <div className="flex justify-end">
+            <Button type="submit" loading={formState.isSubmitting}>Spara</Button>
+          </div>
+        </form>
+      </Card>
+
+      <Card className="p-5">
+        <h2 className="font-semibold text-brand-800">Sponsorer</h2>
+        <p className="mt-1 text-sm text-slate-500">Logga + namn. Visas på inloggningssidan.</p>
+
+        <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+          <Field label="Namn" htmlFor="sp-name">
+            <Input id="sp-name" value={spName} onChange={(e) => setSpName(e.target.value)} placeholder="Sponsorns namn" />
+          </Field>
+          <Field label="Logga" htmlFor="sp-file">
+            <input id="sp-file" type="file" accept="image/*" onChange={(e) => setSpFile(e.target.files?.[0] ?? null)}
+              className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-200 file:px-3 file:py-2 file:text-sm" />
+          </Field>
+          <Button onClick={addSponsor} loading={spBusy}>Lägg till</Button>
+        </div>
+
+        {sponsors.isLoading ? (
+          <LoadingState />
+        ) : (sponsors.data?.length ?? 0) === 0 ? (
+          <p className="mt-4 text-sm text-slate-400">Inga sponsorer ännu.</p>
+        ) : (
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+            {sponsors.data!.map((s) => {
+              const url = publicAssetUrl(s.logo_path)
+              return (
+                <div key={s.id} className={cn('rounded-lg border p-2 text-center', s.active ? 'border-slate-200' : 'border-slate-200 opacity-50')}>
+                  {url ? <img src={url} alt={s.name} className="mx-auto h-12 w-full object-contain" /> : <div className="h-12" />}
+                  <div className="mt-1 line-clamp-1 text-xs font-medium text-slate-700">{s.name}</div>
+                  <div className="mt-1 flex justify-center gap-1">
+                    <Button variant="ghost" onClick={() => toggleSponsor(s)}>{s.active ? 'Dölj' : 'Visa'}</Button>
+                    <Button variant="ghost" onClick={() => removeSponsor(s)}>✕</Button>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
       </Card>

@@ -13,7 +13,6 @@ import { ObservationDetail } from './pages/ObservationDetail'
 import { Vehicles } from './pages/Vehicles'
 import { VehicleDetail } from './pages/VehicleDetail'
 import { SearchPage } from './pages/SearchPage'
-import { Observations } from './pages/Observations'
 import { Information } from './pages/Information'
 import { Profile } from './pages/Profile'
 import { AvatarEditor } from './pages/AvatarEditor'
@@ -42,7 +41,6 @@ export function App() {
         <Route path="/loggbok/ny" element={<LogbookForm />} />
         <Route path="/loggbok/:id" element={<LogbookDetail />} />
         <Route path="/loggbok/:id/redigera" element={<LogbookForm />} />
-        <Route path="/observationer" element={<Observations />} />
         <Route path="/observation/ny" element={<ObservationForm />} />
         <Route path="/observation/:id" element={<ObservationDetail />} />
         <Route path="/observation/:id/redigera" element={<ObservationForm />} />

@@ -7,6 +7,7 @@ import {
   EyesLayer,
   EyewearLayer,
   FaceLayer,
+  FacialHairLayer,
   HairBack,
   HairFront,
   HeadwearLayer,
@@ -65,6 +66,7 @@ export function Avatar({
             <BrowsLayer style={cfg.brows} />
             <EyesLayer style={cfg.eyes} />
             <MouthLayer style={cfg.mouth} />
+            <FacialHairLayer style={cfg.facial} color={cfg.hairColor} />
             <EyewearLayer style={cfg.eyewear} />
             <HairFront style={cfg.hair} color={cfg.hairColor} />
             <HeadwearLayer style={cfg.headwear} color={cfg.headwearColor} />

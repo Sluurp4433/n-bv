@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}))
     const email = String(body.email ?? '').trim().toLowerCase()
     const name = String(body.name ?? '').trim()
-    const role = body.role === 'admin' ? 'admin' : 'medlem'
+    const role = ['admin', 'styrelse', 'medlem'].includes(body.role) ? body.role : 'medlem'
     if (!email) return json({ error: 'E-postadress krävs.' }, 400)
 
     const password =

@@ -15,6 +15,7 @@ import {
   EYE_STYLES,
   EYEWEAR_STYLES,
   FACE_SHAPES,
+  FACIAL_STYLES,
   HAIR_COLORS,
   HAIR_STYLES,
   HEADWEAR_STYLES,
@@ -23,6 +24,7 @@ import {
   KIND_LABELS,
   MOUTH_STYLES,
   NECKWEAR_STYLES,
+  OTHER_KINDS,
   SKIN_TONES,
   TOP_STYLES,
   isHuman,
@@ -103,9 +105,10 @@ export function AvatarEditor() {
           <div className="mb-5">
             <p className="mb-2 text-sm font-medium text-slate-700">Figurtyp</p>
             {[
-              { label: 'Människa', kinds: HUMAN_KINDS as readonly string[] },
+              { label: 'Avatar', kinds: HUMAN_KINDS as readonly string[] },
               { label: 'Djur', kinds: ANIMAL_KINDS as readonly string[] },
               { label: 'Insekter', kinds: INSECT_KINDS as readonly string[] },
+              { label: 'Övrigt', kinds: OTHER_KINDS as readonly string[] },
             ].map((group) => (
               <div key={group.label} className="mb-3">
                 <p className="mb-1 text-xs text-slate-400">{group.label}</p>
@@ -166,6 +169,7 @@ export function AvatarEditor() {
               <PartPicker label="Ögon" field="eyes" options={EYE_STYLES} cfg={cfg} setCfg={setCfg} />
               <PartPicker label="Ögonbryn" field="brows" options={BROW_STYLES} cfg={cfg} setCfg={setCfg} />
               <PartPicker label="Mun" field="mouth" options={MOUTH_STYLES} cfg={cfg} setCfg={setCfg} />
+              <PartPicker label="Ansiktsbehåring" field="facial" options={FACIAL_STYLES} cfg={cfg} setCfg={setCfg} />
             </div>
           )}
 
