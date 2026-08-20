@@ -5,6 +5,7 @@ import { Badge, Button, cn } from './ui'
 import { BrandMark } from './BrandMark'
 import { Avatar } from './Avatar'
 import { memberColor } from '../lib/memberColor'
+import { useSiteSettings } from '../lib/site'
 
 type NavItem = { to: string; label: string; adminOnly?: boolean; end?: boolean }
 
@@ -23,6 +24,8 @@ export function Layout() {
   const { profile, isAdmin, signOut } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
   const navigate = useNavigate()
+  const site = useSiteSettings()
+  const siteName = site.data?.display_name || 'N-BV'
 
   const items = NAV.filter((i) => !i.adminOnly || isAdmin)
 
@@ -43,7 +46,7 @@ export function Layout() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <NavLink to="/hem" className="flex items-center gap-2" onClick={() => setMenuOpen(false)}>
             <BrandMark className="h-8 w-8" />
-            <span className="text-lg font-bold tracking-tight">N-BV</span>
+            <span className="text-lg font-bold tracking-tight">{siteName}</span>
           </NavLink>
 
           {/* Desktop-navigering */}
@@ -120,7 +123,7 @@ export function Layout() {
       </main>
 
       <footer className="mx-auto max-w-6xl px-4 py-8 text-center text-xs text-slate-400">
-        N-BV · Internt medlemsverktyg · Behandla personuppgifter varsamt enligt föreningens GDPR-rutiner.
+        {siteName} · Internt medlemsverktyg · Behandla personuppgifter varsamt enligt föreningens GDPR-rutiner.
       </footer>
     </div>
   )
