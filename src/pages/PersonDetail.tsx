@@ -6,6 +6,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { useProfiles, useSettings, creatorName, canEditOwn } from '../lib/hooks'
 import { useToast } from '../components/Toast'
 import { Modal, ConfirmDialog } from '../components/Modal'
+import { BackLink } from '../components/BackLink'
 import { ChipSelect, TagInput } from '../components/inputs'
 import { personName } from '../lib/persons'
 import { GENDERS, genderLabel } from '../lib/constants'
@@ -62,7 +63,7 @@ export function PersonDetail() {
   return (
     <div className="mx-auto max-w-2xl">
       <div className="mb-4">
-        <Link to="/personer" className="text-sm text-brand-600 hover:underline">← Tillbaka till personer</Link>
+        <BackLink to="/personer" label="Tillbaka till personer" />
       </div>
 
       <Card className="p-5 sm:p-6">

@@ -6,6 +6,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { useProfiles, useSettings, creatorName, canEditOwn } from '../lib/hooks'
 import { useToast } from '../components/Toast'
 import { ConfirmDialog } from '../components/Modal'
+import { BackLink } from '../components/BackLink'
 import { Badge, Button, Card, EmptyState, LoadingState } from '../components/ui'
 import { formatDateTime } from '../lib/format'
 
@@ -62,9 +63,7 @@ export function LogbookDetail() {
   return (
     <div className="mx-auto max-w-2xl">
       <div className="mb-4">
-        <Link to="/loggbok" className="text-sm text-brand-600 hover:underline">
-          ← Tillbaka till loggboken
-        </Link>
+        <BackLink to="/loggbok" label="Tillbaka till loggboken" />
       </div>
 
       <Card className="p-5 sm:p-6">

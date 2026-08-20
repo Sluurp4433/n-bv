@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { normalizeRegnr } from '../lib/format'
 import { Badge, Button, Card, EmptyState, Field, Input, LoadingState } from '../components/ui'
 import { formatDate } from '../lib/format'
 import { Pagination } from './Logbook'
+import { useUrlParam } from '../lib/useUrlState'
+import { fromState } from '../components/BackLink'
 import type { VehicleOverview } from '../types/database.types'
 
 const PAGE_SIZE = 20
@@ -16,9 +18,12 @@ function sanitize(s: string): string {
 }
 
 export function Vehicles() {
-  const [search, setSearch] = useState('')
-  const [query, setQuery] = useState('')
-  const [page, setPage] = useState(0)
+  const loc = useLocation()
+  const [query, setQuery] = useUrlParam('q')
+  const [pageStr, setPageStr] = useUrlParam('p', '0')
+  const page = Number(pageStr) || 0
+  const setPage = (n: number) => setPageStr(String(n))
+  const [search, setSearch] = useState(query)
 
   const result = useQuery({
     queryKey: ['vehicles', query, page],
@@ -118,7 +123,7 @@ export function Vehicles() {
                 {result.data!.rows.map((v) => (
                   <tr key={v.id} className="hover:bg-slate-50">
                     <td className="px-4 py-3">
-                      <Link to={`/fordon/${v.id}`} className="font-semibold text-brand-700 hover:underline">
+                      <Link to={`/fordon/${v.id}`} state={fromState(loc, 'Tillbaka till fordon')} className="font-semibold text-brand-700 hover:underline">
                         {v.registration_number}
                       </Link>
                     </td>
@@ -140,7 +145,7 @@ export function Vehicles() {
           {/* Kort på mobil */}
           <div className="space-y-2 md:hidden">
             {result.data!.rows.map((v) => (
-              <Link key={v.id} to={`/fordon/${v.id}`}>
+              <Link key={v.id} to={`/fordon/${v.id}`} state={fromState(loc, 'Tillbaka till fordon')}>
                 <Card className="p-4 transition-shadow hover:shadow-md">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-brand-700">{v.registration_number}</span>

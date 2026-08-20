@@ -7,6 +7,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { useProfiles, creatorName } from '../lib/hooks'
 import { useToast } from '../components/Toast'
 import { Modal, ConfirmDialog } from '../components/Modal'
+import { BackLink } from '../components/BackLink'
 import { VEHICLE_TYPES } from '../lib/constants'
 import { Badge, Button, Card, EmptyState, Field, Input, LoadingState, Select, Textarea } from '../components/ui'
 import { formatDateTime } from '../lib/format'
@@ -72,9 +73,7 @@ export function VehicleDetail() {
   return (
     <div className="mx-auto max-w-2xl">
       <div className="mb-4">
-        <Link to="/fordon" className="text-sm text-brand-600 hover:underline">
-          ← Tillbaka till fordon
-        </Link>
+        <BackLink to="/fordon" label="Tillbaka till fordon" />
       </div>
 
       <Card className="p-5 sm:p-6">

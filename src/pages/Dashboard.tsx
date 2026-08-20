@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
@@ -7,6 +7,7 @@ import { fetchFeed } from '../lib/feed'
 import { FeedCard } from '../components/FeedCard'
 import { WeekView } from '../components/WeekView'
 import { AnnouncementsBox } from '../components/AnnouncementsBox'
+import { fromState } from '../components/BackLink'
 import { Card, LoadingState } from '../components/ui'
 
 type Stats = {
@@ -26,6 +27,7 @@ const QUICK_LINKS = [
 export function Dashboard() {
   const { profile } = useAuth()
   const { map } = useProfiles()
+  const loc = useLocation()
 
   const feed = useQuery({
     queryKey: ['dashboard_feed'],
@@ -72,7 +74,7 @@ export function Dashboard() {
         ) : (
           <div className="space-y-3">
             {recent.map((item) => (
-              <FeedCard key={`${item.kind}-${item.id}`} item={item} map={map} />
+              <FeedCard key={`${item.kind}-${item.id}`} item={item} map={map} linkState={fromState(loc, 'Tillbaka till startsidan')} />
             ))}
           </div>
         )}

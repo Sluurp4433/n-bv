@@ -1,9 +1,11 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { Button, Card, EmptyState, Field, Input, LoadingState } from '../components/ui'
 import { formatDateTime } from '../lib/format'
+import { useUrlParam } from '../lib/useUrlState'
+import { fromState } from '../components/BackLink'
 import type { SearchResult } from '../types/database.types'
 
 const GROUPS: { type: string; label: string; path: (id: string) => string; emoji: string }[] = [
@@ -14,8 +16,9 @@ const GROUPS: { type: string; label: string; path: (id: string) => string; emoji
 ]
 
 export function SearchPage() {
-  const [term, setTerm] = useState('')
-  const [query, setQuery] = useState('')
+  const loc = useLocation()
+  const [query, setQuery] = useUrlParam('q')
+  const [term, setTerm] = useState(query)
 
   const result = useQuery({
     queryKey: ['search', query],
@@ -87,7 +90,7 @@ export function SearchPage() {
                   </h2>
                   <div className="space-y-2">
                     {items.map((r) => (
-                      <Link key={`${r.result_type}-${r.result_id}`} to={g.path(r.result_id)}>
+                      <Link key={`${r.result_type}-${r.result_id}`} to={g.path(r.result_id)} state={fromState(loc, 'Tillbaka till sökresultatet')}>
                         <Card className="p-4 transition-shadow hover:shadow-md">
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">

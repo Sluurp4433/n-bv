@@ -7,10 +7,10 @@ import type { FeedItem } from '../lib/feed'
 import type { Profile } from '../types/database.types'
 
 /** Content-fokuserat flödeskort (gästbok/flöde-känsla). */
-export function FeedCard({ item, map }: { item: FeedItem; map: Record<string, Profile> }) {
+export function FeedCard({ item, map, linkState }: { item: FeedItem; map: Record<string, Profile>; linkState?: unknown }) {
   const to = item.kind === 'log' ? `/loggbok/${item.id}` : `/observation/${item.id}`
   return (
-    <Link to={to} className="block">
+    <Link to={to} state={linkState} className="block">
       <Card className="p-4 transition-shadow hover:shadow-md sm:p-5">
         <div className="mb-2 flex flex-wrap items-center gap-2">
           {item.kind === 'log' ? <Badge color="slate">Loggbok</Badge> : <Badge color="blue">Observation</Badge>}

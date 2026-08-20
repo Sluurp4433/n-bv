@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useProfiles } from '../lib/hooks'
 import { fetchFeed } from '../lib/feed'
 import { Button, Card, EmptyState, Field, Input, LoadingState, Select } from '../components/ui'
 import { FeedCard } from '../components/FeedCard'
+import { useUrlParam } from '../lib/useUrlState'
+import { fromState } from '../components/BackLink'
 
 const PAGE_SIZE = 15
 
@@ -23,18 +25,21 @@ const TYPE_FILTERS = [
 
 export function Logbook() {
   const { map } = useProfiles()
-  const [search, setSearch] = useState('')
-  const [query, setQuery] = useState('')
-  const [typeFilter, setTypeFilter] = useState<'alla' | 'log' | 'obs'>('alla')
-  const [dateFilter, setDateFilter] = useState('all')
-  const [page, setPage] = useState(0)
+  const loc = useLocation()
+  const [query, setQuery] = useUrlParam('q')
+  const [typeFilter, setTypeFilter] = useUrlParam('type', 'alla')
+  const [dateFilter, setDateFilter] = useUrlParam('date', 'all')
+  const [pageStr, setPageStr] = useUrlParam('p', '0')
+  const page = Number(pageStr) || 0
+  const setPage = (n: number) => setPageStr(String(n))
+  const [search, setSearch] = useState(query)
 
   const sinceISO = dateFilter !== 'all' ? new Date(Date.now() - Number(dateFilter) * 86400000).toISOString() : null
 
   const result = useQuery({
     queryKey: ['feed', query, typeFilter, dateFilter],
     placeholderData: keepPreviousData,
-    queryFn: () => fetchFeed({ query, type: typeFilter, sinceISO }),
+    queryFn: () => fetchFeed({ query, type: typeFilter as 'alla' | 'log' | 'obs', sinceISO }),
   })
 
   function applySearch(e: React.FormEvent) {
@@ -91,7 +96,7 @@ export function Logbook() {
           {query && <p className="mb-2 text-sm text-slate-500">{total} träff{total === 1 ? '' : 'ar'} hittades.</p>}
           <div className="space-y-3">
             {shown.map((item) => (
-              <FeedCard key={`${item.kind}-${item.id}`} item={item} map={map} />
+              <FeedCard key={`${item.kind}-${item.id}`} item={item} map={map} linkState={fromState(loc, 'Tillbaka till loggboken')} />
             ))}
           </div>
           {pages > 1 && <Pagination page={page} pages={pages} onChange={setPage} loading={result.isFetching} />}

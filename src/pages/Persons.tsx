@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
+import { useUrlParam } from '../lib/useUrlState'
+import { fromState } from '../components/BackLink'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { personName } from '../lib/persons'
@@ -9,8 +11,9 @@ import { formatDate } from '../lib/format'
 import type { Person } from '../types/database.types'
 
 export function Persons() {
-  const [search, setSearch] = useState('')
-  const [query, setQuery] = useState('')
+  const loc = useLocation()
+  const [query, setQuery] = useUrlParam('q')
+  const [search, setSearch] = useState(query)
 
   const result = useQuery({
     queryKey: ['persons', query],
@@ -58,7 +61,7 @@ export function Persons() {
       ) : (
         <div className="space-y-2">
           {rows.map((p) => (
-            <Link key={p.id} to={`/personer/${p.id}`}>
+            <Link key={p.id} to={`/personer/${p.id}`} state={fromState(loc, 'Tillbaka till personer')}>
               <Card className="p-4 transition-shadow hover:shadow-md">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
