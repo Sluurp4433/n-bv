@@ -5,7 +5,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { useToast } from './Toast'
 import { Modal } from './Modal'
 import { MemberPicker } from './MemberPicker'
-import { Button, Field, Input, Textarea, Alert } from './ui'
+import { Button, Field, Input, Textarea, Alert, cn } from './ui'
 import { createShift, bookShift } from '../lib/shifts'
 import { toDatetimeLocal } from '../lib/format'
 
@@ -17,6 +17,7 @@ type FormValues = {
   location: string
   notes: string
   bookSelf: boolean
+  usesGuardCar: boolean
 }
 
 function defaultTimes(day?: Date) {
@@ -44,7 +45,7 @@ export function ShiftForm({
   const times = defaultTimes(day)
   const [others, setOthers] = useState<string[]>([])
 
-  const { register, handleSubmit, setError, reset, formState } = useForm<FormValues>({
+  const { register, handleSubmit, setError, reset, watch, setValue, formState } = useForm<FormValues>({
     defaultValues: {
       starts_at: times.start,
       ends_at: times.end,
@@ -53,8 +54,10 @@ export function ShiftForm({
       location: '',
       notes: '',
       bookSelf: true,
+      usesGuardCar: true,
     },
   })
+  const usesGuardCar = watch('usesGuardCar')
 
   async function onSubmit(values: FormValues) {
     if (new Date(values.ends_at) <= new Date(values.starts_at)) {
@@ -75,6 +78,7 @@ export function ShiftForm({
         title: values.title || null,
         location: values.location || null,
         notes: values.notes || null,
+        uses_guard_car: values.usesGuardCar,
       },
       values.bookSelf,
       user.id
@@ -125,6 +129,22 @@ export function ShiftForm({
         <Field label="Antal platser" htmlFor="s-cap" hint="Hur många medlemmar som kan boka passet.">
           <Input id="s-cap" type="number" min={1} max={20} {...register('capacity', { valueAsNumber: true })} />
         </Field>
+        <div>
+          <p className="mb-1.5 text-sm font-medium text-slate-700">Bil</p>
+          <button
+            type="button"
+            onClick={() => setValue('usesGuardCar', !usesGuardCar)}
+            aria-pressed={usesGuardCar}
+            className={cn(
+              'flex w-full items-center gap-2 rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors sm:w-auto',
+              usesGuardCar ? 'border-red-300 bg-red-50 text-red-800' : 'border-slate-300 bg-white text-slate-600 hover:border-slate-400'
+            )}
+          >
+            <span className="h-3.5 w-3.5 rounded-full" style={{ backgroundColor: usesGuardCar ? '#ef4444' : '#cbd5e1' }} />
+            🚗 Vaktbilen{usesGuardCar ? ' – vald' : ''}
+          </button>
+          <p className="mt-1 text-xs text-slate-500">Vald som standard. Markera bort om du kör egen bil. Passet blir ljusrött i kalendern när vaktbilen används.</p>
+        </div>
         <Field label="Rubrik (valfritt)" htmlFor="s-title">
           <Input id="s-title" {...register('title')} placeholder="T.ex. Kvällspatrull" />
         </Field>

@@ -442,6 +442,7 @@ export type Database = {
           starts_at: string
           title: string | null
           updated_at: string
+          uses_guard_car: boolean
         }
         Insert: {
           capacity?: number
@@ -454,6 +455,7 @@ export type Database = {
           starts_at: string
           title?: string | null
           updated_at?: string
+          uses_guard_car?: boolean
         }
         Update: {
           capacity?: number
@@ -466,6 +468,7 @@ export type Database = {
           starts_at?: string
           title?: string | null
           updated_at?: string
+          uses_guard_car?: boolean
         }
         Relationships: []
       }

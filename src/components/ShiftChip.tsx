@@ -28,14 +28,15 @@ export function ShiftChip({
   const extra = booked.length - shown.length
   const names = booked.map((p) => p.name || p.email).join(', ') || 'Inga bokade'
   const overlap = Math.round(avatarSize * 0.32)
+  const guard = shift.uses_guard_car
 
   return (
     <button
       onClick={onClick}
-      title={`${time} · ${names}`}
+      title={`${time} · ${names}${guard ? ' · Vaktbilen' : ''}`}
       className={cn(
         'flex w-full items-center gap-2 rounded-lg border px-2 py-1.5 text-left transition-colors',
-        mine ? 'bg-brand-50' : 'bg-white hover:bg-slate-50'
+        guard ? 'bg-red-50 hover:bg-red-100' : mine ? 'bg-brand-50' : 'bg-white hover:bg-slate-50'
       )}
       style={mine && userId ? { borderColor: memberColor(map[userId]), borderWidth: 2 } : undefined}
     >

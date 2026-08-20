@@ -49,6 +49,7 @@ export type CreateShiftInput = {
   title?: string | null
   location?: string | null
   notes?: string | null
+  uses_guard_car?: boolean
 }
 
 export async function createShift(
