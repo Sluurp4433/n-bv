@@ -10,7 +10,8 @@ import { useToast } from '../components/Toast'
 import { Modal, ConfirmDialog } from '../components/Modal'
 import { Avatar } from '../components/Avatar'
 import { memberColor } from '../lib/memberColor'
-import { Badge, Button, Card, EmptyState, Field, Input, LoadingState, Select, Textarea, cn } from '../components/ui'
+import { Badge, Button, Card, EmptyState, Field, Input, LoadingState, Select, Textarea } from '../components/ui'
+import { CarChoice } from '../components/inputs'
 import { formatDate, formatTime, toDatetimeLocal } from '../lib/format'
 
 export function ShiftDetail() {
@@ -103,7 +104,7 @@ export function ShiftDetail() {
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-bold text-brand-800">{shift.title || 'Körpass'}</h1>
           {full ? <Badge color="slate">Fullbokat</Badge> : <Badge color="green">{shift.capacity - shift.bookings.length} lediga</Badge>}
-          {shift.uses_guard_car && <Badge color="red">🚗 Vaktbilen</Badge>}
+          {shift.uses_guard_car ? <Badge color="red">🚗 Vaktbilen</Badge> : <Badge color="blue">🚙 Egen bil</Badge>}
         </div>
         <p className="mt-2 text-slate-600">
           {formatDate(shift.starts_at)} · {formatTime(shift.starts_at)}–{formatTime(shift.ends_at)}
@@ -294,18 +295,10 @@ function EditShiftModal({
         <Field label="Antal platser" htmlFor="e-cap">
           <Input id="e-cap" type="number" min={1} max={20} {...register('capacity', { valueAsNumber: true })} />
         </Field>
-        <button
-          type="button"
-          onClick={() => setValue('usesGuardCar', !usesGuardCar)}
-          aria-pressed={usesGuardCar}
-          className={cn(
-            'flex w-full items-center gap-2 rounded-lg border-2 px-4 py-2.5 text-sm font-medium transition-colors',
-            usesGuardCar ? 'border-red-300 bg-red-50 text-red-800' : 'border-slate-300 bg-white text-slate-600'
-          )}
-        >
-          <span className="h-3 w-3 rounded-full" style={{ backgroundColor: usesGuardCar ? '#ef4444' : '#cbd5e1' }} />
-          🚗 Vaktbilen{usesGuardCar ? ' – vald' : ''}
-        </button>
+        <div>
+          <p className="mb-1.5 text-sm font-medium text-slate-700">Bil</p>
+          <CarChoice value={usesGuardCar} onChange={(v) => setValue('usesGuardCar', v)} />
+        </div>
         <Field label="Rubrik" htmlFor="e-title">
           <Input id="e-title" {...register('title')} />
         </Field>

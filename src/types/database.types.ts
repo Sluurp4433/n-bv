@@ -260,6 +260,34 @@ export type Database = {
         }
         Relationships: []
       }
+      logbook_images: {
+        Row: {
+          id: string
+          logbook_entry_id: string
+          file_path: string
+          caption: string | null
+          uploaded_by: string | null
+          created_at: string
+          search: unknown | null
+        }
+        Insert: {
+          id?: string
+          logbook_entry_id: string
+          file_path: string
+          caption?: string | null
+          uploaded_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          logbook_entry_id?: string
+          file_path?: string
+          caption?: string | null
+          uploaded_by?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
@@ -614,5 +642,6 @@ export type SiteSettings = Tables<'site_settings'>
 export type Sponsor = Tables<'sponsors'>
 export type Person = Tables<'persons'>
 export type ObservationImage = Tables<'observation_images'>
+export type LogbookImage = Tables<'logbook_images'>
 export type UserRole = Enums<'user_role'>
 export type SearchResult = PublicSchema['Functions']['search_all']['Returns'][number]

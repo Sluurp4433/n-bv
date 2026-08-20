@@ -36,7 +36,7 @@ export function ShiftChip({
       title={`${time} · ${names}${guard ? ' · Vaktbilen' : ''}`}
       className={cn(
         'flex w-full items-center gap-2 rounded-lg border px-2 py-1.5 text-left transition-colors',
-        guard ? 'bg-red-50 hover:bg-red-100' : mine ? 'bg-brand-50' : 'bg-white hover:bg-slate-50'
+        guard ? 'bg-red-100 hover:bg-red-200' : 'bg-sky-100 hover:bg-sky-200'
       )}
       style={mine && userId ? { borderColor: memberColor(map[userId]), borderWidth: 2 } : undefined}
     >

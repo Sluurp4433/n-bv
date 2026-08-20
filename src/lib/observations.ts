@@ -100,3 +100,35 @@ export async function deleteObservationImage(id: string, filePath: string): Prom
   await supabase.from('observation_images').delete().eq('id', id)
   await supabase.storage.from(IMG_BUCKET).remove([filePath])
 }
+
+/** Laddar upp en bild till ett loggboksinlägg med sökbar bildtext (samma bucket). */
+export async function uploadLogbookImage(
+  entryId: string,
+  file: File,
+  caption: string,
+  userId: string
+): Promise<{ error?: string }> {
+  const safe = file.name.replace(/[^\w.\-]+/g, '_')
+  const path = `log/${entryId}/${crypto.randomUUID()}-${safe}`
+  const up = await supabase.storage.from(IMG_BUCKET).upload(path, file, {
+    upsert: false,
+    contentType: file.type || undefined,
+  })
+  if (up.error) return { error: 'Kunde inte ladda upp bilden.' }
+  const { error } = await supabase.from('logbook_images').insert({
+    logbook_entry_id: entryId,
+    file_path: path,
+    caption: caption || null,
+    uploaded_by: userId,
+  })
+  if (error) {
+    await supabase.storage.from(IMG_BUCKET).remove([path])
+    return { error: 'Kunde inte spara bilden.' }
+  }
+  return {}
+}
+
+export async function deleteLogbookImage(id: string, filePath: string): Promise<void> {
+  await supabase.from('logbook_images').delete().eq('id', id)
+  await supabase.storage.from(IMG_BUCKET).remove([filePath])
+}

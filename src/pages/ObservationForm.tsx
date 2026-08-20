@@ -38,7 +38,7 @@ export function ObservationForm() {
   const [location, setLocation] = useState('')
   const [type, setType] = useState('')
   const [category, setCategory] = useState('')
-  const [priority, setPriority] = useState('normal')
+  const [priority, setPriority] = useState('lag')
   const [notes, setNotes] = useState('')
 
   // Fordon

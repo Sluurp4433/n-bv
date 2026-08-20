@@ -38,6 +38,36 @@ export function ChipSelect({
   )
 }
 
+/** Val mellan Vaktbilen (röd) och Egen bil (ljusblå). */
+export function CarChoice({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <button
+        type="button"
+        onClick={() => onChange(true)}
+        aria-pressed={value}
+        className={cn(
+          'flex items-center gap-2 rounded-lg border-2 px-4 py-2.5 text-sm font-medium transition-colors',
+          value ? 'border-red-400 bg-red-100 text-red-800' : 'border-slate-300 bg-white text-slate-600 hover:border-slate-400'
+        )}
+      >
+        🚗 Vaktbilen
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange(false)}
+        aria-pressed={!value}
+        className={cn(
+          'flex items-center gap-2 rounded-lg border-2 px-4 py-2.5 text-sm font-medium transition-colors',
+          !value ? 'border-sky-400 bg-sky-100 text-sky-800' : 'border-slate-300 bg-white text-slate-600 hover:border-slate-400'
+        )}
+      >
+        🚙 Egen bil
+      </button>
+    </div>
+  )
+}
+
 /** Fler värden via chips (skriv + Enter). För t.ex. smeknamn eller flera regnr. */
 export function TagInput({
   value,

@@ -5,9 +5,18 @@ import { useAuth } from '../auth/AuthProvider'
 import { useToast } from './Toast'
 import { Modal } from './Modal'
 import { MemberPicker } from './MemberPicker'
-import { Button, Field, Input, Textarea, Alert, cn } from './ui'
+import { Button, Field, Input, Textarea, Alert } from './ui'
+import { CarChoice } from './inputs'
 import { createShift, bookShift } from '../lib/shifts'
 import { toDatetimeLocal } from '../lib/format'
+
+/** Datetime-local-sträng + h timmar → ny datetime-local-sträng. */
+function plusHours(local: string, h: number): string {
+  const d = new Date(local)
+  if (isNaN(d.getTime())) return ''
+  d.setHours(d.getHours() + h)
+  return toDatetimeLocal(d)
+}
 
 type FormValues = {
   starts_at: string
@@ -58,6 +67,7 @@ export function ShiftForm({
     },
   })
   const usesGuardCar = watch('usesGuardCar')
+  const startReg = register('starts_at', { required: true })
 
   async function onSubmit(values: FormValues) {
     if (new Date(values.ends_at) <= new Date(values.starts_at)) {
@@ -120,7 +130,16 @@ export function ShiftForm({
         {formState.errors.root && <Alert variant="error">{formState.errors.root.message}</Alert>}
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Start" htmlFor="s-start" error={formState.errors.starts_at?.message}>
-            <Input id="s-start" type="datetime-local" {...register('starts_at', { required: true })} />
+            <Input
+              id="s-start"
+              type="datetime-local"
+              {...startReg}
+              onChange={(e) => {
+                startReg.onChange(e)
+                const end = plusHours(e.target.value, 3)
+                if (end) setValue('ends_at', end)
+              }}
+            />
           </Field>
           <Field label="Slut" htmlFor="s-end" error={formState.errors.ends_at?.message}>
             <Input id="s-end" type="datetime-local" {...register('ends_at', { required: true })} />
@@ -131,19 +150,8 @@ export function ShiftForm({
         </Field>
         <div>
           <p className="mb-1.5 text-sm font-medium text-slate-700">Bil</p>
-          <button
-            type="button"
-            onClick={() => setValue('usesGuardCar', !usesGuardCar)}
-            aria-pressed={usesGuardCar}
-            className={cn(
-              'flex w-full items-center gap-2 rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors sm:w-auto',
-              usesGuardCar ? 'border-red-300 bg-red-50 text-red-800' : 'border-slate-300 bg-white text-slate-600 hover:border-slate-400'
-            )}
-          >
-            <span className="h-3.5 w-3.5 rounded-full" style={{ backgroundColor: usesGuardCar ? '#ef4444' : '#cbd5e1' }} />
-            🚗 Vaktbilen{usesGuardCar ? ' – vald' : ''}
-          </button>
-          <p className="mt-1 text-xs text-slate-500">Vald som standard. Markera bort om du kör egen bil. Passet blir ljusrött i kalendern när vaktbilen används.</p>
+          <CarChoice value={usesGuardCar} onChange={(v) => setValue('usesGuardCar', v)} />
+          <p className="mt-1 text-xs text-slate-500">Vaktbilen är vald som standard. Passet blir rött i kalendern med vaktbilen, ljusblått med egen bil.</p>
         </div>
         <Field label="Rubrik (valfritt)" htmlFor="s-title">
           <Input id="s-title" {...register('title')} placeholder="T.ex. Kvällspatrull" />

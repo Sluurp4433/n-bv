@@ -8,6 +8,7 @@ import { useToast } from '../components/Toast'
 import { ConfirmDialog } from '../components/Modal'
 import { BackLink } from '../components/BackLink'
 import { Badge, Button, Card, EmptyState, LoadingState } from '../components/ui'
+import { observationImageUrl } from '../lib/observations'
 import { formatDateTime } from '../lib/format'
 
 export function LogbookDetail() {
@@ -27,6 +28,14 @@ export function LogbookDetail() {
       const { data, error } = await supabase.from('logbook_entries').select('*').eq('id', id!).single()
       if (error) throw error
       return data
+    },
+  })
+
+  const images = useQuery({
+    queryKey: ['logbook-images', id],
+    queryFn: async () => {
+      const { data } = await supabase.from('logbook_images').select('id,file_path,caption').eq('logbook_entry_id', id!)
+      return Promise.all((data ?? []).map(async (im) => ({ id: im.id, caption: im.caption, url: await observationImageUrl(im.file_path) })))
     },
   })
 
@@ -107,6 +116,20 @@ export function LogbookDetail() {
           </div>
         )}
       </Card>
+
+      {(images.data?.length ?? 0) > 0 && (
+        <div className="mt-6">
+          <h2 className="mb-2 font-semibold text-brand-800">Bilder</h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {images.data!.map((im) => (
+              <a key={im.id} href={im.url ?? undefined} target="_blank" rel="noopener" className="block rounded-lg border border-slate-200 p-2">
+                {im.url ? <img src={im.url} alt={im.caption ?? ''} className="h-28 w-full rounded object-cover" /> : <div className="h-28 rounded bg-slate-100" />}
+                {im.caption && <div className="mt-1 truncate text-xs text-slate-600">{im.caption}</div>}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         open={confirmOpen}
