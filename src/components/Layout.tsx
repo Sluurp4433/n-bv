@@ -27,7 +27,8 @@ export function Layout() {
   const site = useSiteSettings()
   const siteName = site.data?.display_name || 'N-BV'
 
-  const items = NAV.filter((i) => !i.adminOnly || isAdmin)
+  const isBoard = isAdmin || profile?.role === 'styrelse'
+  const items = NAV.filter((i) => !i.adminOnly || isBoard)
 
   async function handleSignOut() {
     await signOut()

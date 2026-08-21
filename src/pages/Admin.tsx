@@ -48,19 +48,27 @@ async function invokeFunction<T>(
 }
 
 export function Admin() {
-  const [tab, setTab] = useState<Tab>('medlemmar')
+  const { isAdmin } = useAuth()
+  const [tab, setTab] = useState<Tab>(isAdmin ? 'medlemmar' : 'startsida')
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: 'medlemmar', label: 'Medlemmar' },
+    ...(isAdmin ? [{ id: 'medlemmar' as Tab, label: 'Medlemmar' }] : []),
     { id: 'startsida', label: 'Startsida' },
-    { id: 'driftinfo', label: 'Driftinfo' },
-    { id: 'audit', label: 'Ändringslogg' },
-    { id: 'gdpr', label: 'GDPR & gallring' },
+    ...(isAdmin
+      ? [
+          { id: 'driftinfo' as Tab, label: 'Driftinfo' },
+          { id: 'audit' as Tab, label: 'Ändringslogg' },
+          { id: 'gdpr' as Tab, label: 'GDPR & gallring' },
+        ]
+      : []),
   ]
 
   return (
     <div>
-      <PageHeader title="Administration" description="Hantera medlemmar, historik och datalagring." />
+      <PageHeader
+        title="Administration"
+        description={isAdmin ? 'Hantera medlemmar, historik och datalagring.' : 'Hantera sponsorer på startsidan.'}
+      />
 
       <div className="mb-5 flex gap-1 overflow-x-auto border-b border-slate-200">
         {tabs.map((t) => (
@@ -79,11 +87,11 @@ export function Admin() {
         ))}
       </div>
 
-      {tab === 'medlemmar' && <MembersTab />}
-      {tab === 'startsida' && <SiteTab />}
-      {tab === 'driftinfo' && <AnnouncementsTab />}
-      {tab === 'audit' && <AuditTab />}
-      {tab === 'gdpr' && <GdprTab />}
+      {tab === 'medlemmar' && isAdmin && <MembersTab />}
+      {tab === 'startsida' && <SiteTab isAdmin={isAdmin} />}
+      {tab === 'driftinfo' && isAdmin && <AnnouncementsTab />}
+      {tab === 'audit' && isAdmin && <AuditTab />}
+      {tab === 'gdpr' && isAdmin && <GdprTab />}
     </div>
   )
 }
@@ -632,7 +640,7 @@ function AnnouncementsTab() {
 }
 
 /* ---------------- Startsida & sponsorer ---------------- */
-function SiteTab() {
+function SiteTab({ isAdmin }: { isAdmin: boolean }) {
   const toast = useToast()
   const qc = useQueryClient()
   const site = useSiteSettings()
@@ -719,37 +727,39 @@ function SiteTab() {
 
   return (
     <div className="space-y-4">
-      <Card className="p-5">
-        <h2 className="font-semibold text-brand-800">Startsidans innehåll</h2>
-        <p className="mt-1 text-sm text-slate-500">Visas publikt på inloggningssidan.</p>
+      {isAdmin && (
+        <Card className="p-5">
+          <h2 className="font-semibold text-brand-800">Startsidans innehåll</h2>
+          <p className="mt-1 text-sm text-slate-500">Visas publikt på inloggningssidan.</p>
 
-        <div className="mt-4 flex items-center gap-4">
-          <div className="flex h-20 w-20 items-center justify-center rounded-lg border border-slate-200 bg-slate-50">
-            {logoUrl ? <img src={logoUrl} alt="Logga" className="h-full w-full object-contain p-1" /> : <span className="text-xs text-slate-400">Ingen logga</span>}
+          <div className="mt-4 flex items-center gap-4">
+            <div className="flex h-20 w-20 items-center justify-center rounded-lg border border-slate-200 bg-slate-50">
+              {logoUrl ? <img src={logoUrl} alt="Logga" className="h-full w-full object-contain p-1" /> : <span className="text-xs text-slate-400">Ingen logga</span>}
+            </div>
+            <label className="cursor-pointer">
+              <span className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-medium text-white hover:bg-brand-800">
+                {logoBusy ? 'Laddar upp…' : 'Byt logga'}
+              </span>
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => onLogoChange(e.target.files?.[0] ?? null)} />
+            </label>
           </div>
-          <label className="cursor-pointer">
-            <span className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-medium text-white hover:bg-brand-800">
-              {logoBusy ? 'Laddar upp…' : 'Byt logga'}
-            </span>
-            <input type="file" accept="image/*" className="hidden" onChange={(e) => onLogoChange(e.target.files?.[0] ?? null)} />
-          </label>
-        </div>
 
-        <form onSubmit={handleSubmit(saveSettings)} className="mt-4 space-y-3">
-          <Field label="Föreningsnamn" htmlFor="s-name">
-            <Input id="s-name" {...register('display_name')} placeholder="N-BV" />
-          </Field>
-          <Field label="Undertext" htmlFor="s-tag">
-            <Input id="s-tag" {...register('tagline')} placeholder="Tryggare tillsammans." />
-          </Field>
-          <Field label="Tipstelefon" htmlFor="s-tip" hint="Visas stort på inloggningssidan.">
-            <Input id="s-tip" {...register('tip_phone')} placeholder="070-123 45 67" />
-          </Field>
-          <div className="flex justify-end">
-            <Button type="submit" loading={formState.isSubmitting}>Spara</Button>
-          </div>
-        </form>
-      </Card>
+          <form onSubmit={handleSubmit(saveSettings)} className="mt-4 space-y-3">
+            <Field label="Föreningsnamn" htmlFor="s-name">
+              <Input id="s-name" {...register('display_name')} placeholder="N-BV" />
+            </Field>
+            <Field label="Undertext" htmlFor="s-tag">
+              <Input id="s-tag" {...register('tagline')} placeholder="Tryggare tillsammans." />
+            </Field>
+            <Field label="Tipstelefon" htmlFor="s-tip" hint="Visas stort på inloggningssidan.">
+              <Input id="s-tip" {...register('tip_phone')} placeholder="070-123 45 67" />
+            </Field>
+            <div className="flex justify-end">
+              <Button type="submit" loading={formState.isSubmitting}>Spara</Button>
+            </div>
+          </form>
+        </Card>
+      )}
 
       <Card className="p-5">
         <h2 className="font-semibold text-brand-800">Sponsorer</h2>

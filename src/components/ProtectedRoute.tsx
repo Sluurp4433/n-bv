@@ -6,9 +6,12 @@ import { LoadingState, Alert, Button } from './ui'
 export function ProtectedRoute({
   children,
   adminOnly,
+  boardOk,
 }: {
   children: ReactNode
   adminOnly?: boolean
+  /** Om adminOnly är satt: släpp även in styrelse (sidan gör sin egen finmaskiga behörighetskoll). */
+  boardOk?: boolean
 }) {
   const { loading, session, profile, isActive, isAdmin, signOut } = useAuth()
   const location = useLocation()
@@ -38,7 +41,8 @@ export function ProtectedRoute({
     )
   }
 
-  if (adminOnly && !isAdmin) {
+  const isBoard = boardOk && profile?.role === 'styrelse'
+  if (adminOnly && !isAdmin && !isBoard) {
     return <Navigate to="/hem" replace />
   }
 
