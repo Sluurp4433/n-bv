@@ -1,13 +1,14 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import { useProfiles, creatorName } from '../lib/hooks'
 import { useFuelGauge, useSetFuelLevel } from '../lib/fuel'
 import { formatDateTime } from '../lib/format'
-import { Card, LoadingState } from './ui'
+import { Button, Card, LoadingState } from './ui'
 
 const CX = 100
 const CY = 100
 const R = 78
+const HANDLE_R = 12
 
 function angleFor(level: number) {
   return 180 * (1 - level / 100)
@@ -32,6 +33,7 @@ function levelColor(level: number) {
   return '#1f7a4d'
 }
 
+/** Räknar om en skärmpunkt till en nivå 0-100, relativt mätarens SVG. */
 function levelFromPoint(clientX: number, clientY: number, svg: SVGSVGElement): number {
   const rect = svg.getBoundingClientRect()
   const scaleX = 200 / rect.width
@@ -51,31 +53,44 @@ export function FuelGauge() {
   const { map } = useProfiles()
   const fuel = useFuelGauge()
   const setFuelLevel = useSetFuelLevel()
-  const svgRef = useRef<SVGSVGElement>(null)
+  const [editing, setEditing] = useState(false)
   const [dragLevel, setDragLevel] = useState<number | null>(null)
   const [dragging, setDragging] = useState(false)
 
   const savedLevel = fuel.data?.level ?? 50
   const level = dragLevel ?? savedLevel
 
-  function handlePointerDown(e: React.PointerEvent<SVGSVGElement>) {
-    if (!user) return
+  function toggleEditing() {
+    setDragLevel(null)
+    setEditing((e) => !e)
+  }
+
+  // Draget hakas bara på själva visarhandtaget, och bara i redigeringsläge —
+  // ett oavsiktligt svep över kortet ska inte kunna ändra värdet.
+  function handlePointerDown(e: React.PointerEvent<SVGCircleElement>) {
+    if (!user || !editing) return
+    const svg = e.currentTarget.ownerSVGElement
+    if (!svg) return
     e.currentTarget.setPointerCapture(e.pointerId)
     setDragging(true)
-    setDragLevel(levelFromPoint(e.clientX, e.clientY, e.currentTarget))
+    setDragLevel(levelFromPoint(e.clientX, e.clientY, svg))
   }
 
-  function handlePointerMove(e: React.PointerEvent<SVGSVGElement>) {
+  function handlePointerMove(e: React.PointerEvent<SVGCircleElement>) {
     if (!dragging) return
-    setDragLevel(levelFromPoint(e.clientX, e.clientY, e.currentTarget))
+    const svg = e.currentTarget.ownerSVGElement
+    if (!svg) return
+    setDragLevel(levelFromPoint(e.clientX, e.clientY, svg))
   }
 
-  async function handlePointerUp(e: React.PointerEvent<SVGSVGElement>) {
+  async function handlePointerUp(e: React.PointerEvent<SVGCircleElement>) {
     if (!dragging || !user) return
     setDragging(false)
-    const finalLevel = levelFromPoint(e.clientX, e.clientY, e.currentTarget)
+    const svg = e.currentTarget.ownerSVGElement
+    const finalLevel = svg ? levelFromPoint(e.clientX, e.clientY, svg) : level
     setDragLevel(finalLevel)
     await setFuelLevel(finalLevel, user.id)
+    setEditing(false)
   }
 
   if (fuel.isLoading) {
@@ -87,42 +102,46 @@ export function FuelGauge() {
   }
 
   const needleTip = pointAt(angleFor(level), R - 12)
+  const handlePos = pointAt(angleFor(level), R)
 
   return (
     <Card className="p-4">
-      <h2 className="mb-2 text-center font-semibold text-brand-800">Tankmätare — vaktbilen</h2>
-      <svg
-        ref={svgRef}
-        viewBox="0 0 200 120"
-        className="mx-auto w-full max-w-xs touch-none select-none"
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-      >
-        <path
-          d={progressArcPath(100)}
-          fill="none"
-          stroke="#e2e8f0"
-          strokeWidth={14}
-          strokeLinecap="round"
-        />
-        <path
-          d={progressArcPath(level)}
-          fill="none"
-          stroke={levelColor(level)}
-          strokeWidth={14}
-          strokeLinecap="round"
-        />
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="font-semibold text-brand-800">Tankmätare — vaktbilen</h2>
+        <Button variant="secondary" size="md" className="!px-3 !py-1 text-xs" onClick={toggleEditing}>
+          {editing ? 'Klar' : 'Ändra'}
+        </Button>
+      </div>
+      <svg viewBox="0 0 200 120" className="mx-auto w-full max-w-xs select-none">
+        <path d={progressArcPath(100)} fill="none" stroke="#e2e8f0" strokeWidth={14} strokeLinecap="round" />
+        <path d={progressArcPath(level)} fill="none" stroke={levelColor(level)} strokeWidth={14} strokeLinecap="round" />
         <text x={16} y={112} className="fill-slate-500" fontSize={12} fontWeight={600}>E</text>
         <text x={178} y={112} className="fill-slate-500" fontSize={12} fontWeight={600}>F</text>
         <line x1={CX} y1={CY} x2={needleTip.x} y2={needleTip.y} stroke="#1e293b" strokeWidth={3} strokeLinecap="round" />
         <circle cx={CX} cy={CY} r={7} fill="#1e293b" />
+        {editing && (
+          <circle
+            cx={handlePos.x}
+            cy={handlePos.y}
+            r={HANDLE_R}
+            fill="#fff"
+            stroke="#1e293b"
+            strokeWidth={3}
+            className="touch-none"
+            style={{ cursor: 'grab' }}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+          />
+        )}
         <text x={CX} y={CY + 34} textAnchor="middle" className="fill-brand-800" fontSize={20} fontWeight={700}>
           {level}%
         </text>
       </svg>
 
-      <p className="mt-2 text-center text-xs text-slate-400">Dra i visaren för att uppdatera nivån.</p>
+      <p className="mt-2 text-center text-xs text-slate-400">
+        {editing ? 'Dra i handtaget för att ändra nivån.' : 'Tryck "Ändra" för att uppdatera nivån.'}
+      </p>
 
       {fuel.data && (
         <p className="mt-1 text-center text-xs text-slate-500">
