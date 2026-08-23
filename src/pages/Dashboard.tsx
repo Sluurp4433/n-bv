@@ -1,21 +1,14 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
 import { useProfiles } from '../lib/hooks'
 import { fetchFeed } from '../lib/feed'
 import { FeedCard } from '../components/FeedCard'
 import { WeekView } from '../components/WeekView'
 import { AnnouncementsBox } from '../components/AnnouncementsBox'
+import { FuelGauge } from '../components/FuelGauge'
 import { fromState } from '../components/BackLink'
 import { Card, LoadingState } from '../components/ui'
-
-type Stats = {
-  observations_7d: number
-  logbook_7d: number
-  observations_total: number
-  vehicles_total: number
-}
 
 const QUICK_LINKS = [
   { to: '/observation/ny', emoji: '➕', title: 'Ny observation' },
@@ -34,15 +27,6 @@ export function Dashboard() {
     queryFn: () => fetchFeed({ perTableLimit: 5 }),
   })
 
-  const statsQuery = useQuery({
-    queryKey: ['dashboard_stats'],
-    queryFn: async (): Promise<Stats> => {
-      const { data, error } = await supabase.rpc('dashboard_stats')
-      if (error) throw error
-      return data as unknown as Stats
-    },
-  })
-  const stats = statsQuery.data
   const recent = (feed.data ?? []).slice(0, 5)
 
   return (
@@ -92,24 +76,8 @@ export function Dashboard() {
         ))}
       </div>
 
-      {/* Statistik (nedtonad) */}
-      <div className="rounded-xl border border-slate-200 bg-white/60 px-4 py-3">
-        <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
-          <Stat label="Obs. (7 dgr)" value={stats?.observations_7d} />
-          <Stat label="Inlägg (7 dgr)" value={stats?.logbook_7d} />
-          <Stat label="Obs. totalt" value={stats?.observations_total} />
-          <Stat label="Fordon" value={stats?.vehicles_total} />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function Stat({ label, value }: { label: string; value?: number }) {
-  return (
-    <div>
-      <div className="text-lg font-semibold text-slate-700">{value ?? '–'}</div>
-      <div className="text-xs text-slate-400">{label}</div>
+      {/* Tankmätare */}
+      <FuelGauge />
     </div>
   )
 }

@@ -21,6 +21,7 @@ import { AvatarEditor } from './pages/AvatarEditor'
 import { Calendar } from './pages/Calendar'
 import { ShiftDetail } from './pages/ShiftDetail'
 import { Admin } from './pages/Admin'
+import { Stats } from './pages/Stats'
 
 export function App() {
   return (
@@ -64,6 +65,7 @@ export function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/korpass" element={<Stats />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/hem" replace />} />

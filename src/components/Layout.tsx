@@ -18,6 +18,7 @@ const NAV: NavItem[] = [
   { to: '/information', label: 'Information' },
   { to: '/sok', label: 'Sök' },
   { to: '/admin', label: 'Administration', adminOnly: true },
+  { to: '/korpass', label: 'Körpass' },
 ]
 
 export function Layout() {

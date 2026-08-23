@@ -569,6 +569,57 @@ export type Database = {
         }
         Relationships: []
       }
+      fuel_gauge: {
+        Row: {
+          id: number
+          level: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: number
+          level?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: number
+          level?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      search_logs: {
+        Row: {
+          clicked_at: string
+          id: string
+          query: string
+          result_id: string
+          result_label: string
+          result_type: string
+          searched_by: string | null
+        }
+        Insert: {
+          clicked_at?: string
+          id?: string
+          query: string
+          result_id: string
+          result_label: string
+          result_type: string
+          searched_by?: string | null
+        }
+        Update: {
+          clicked_at?: string
+          id?: string
+          query?: string
+          result_id?: string
+          result_label?: string
+          result_type?: string
+          searched_by?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       vehicle_overview: {
@@ -591,11 +642,18 @@ export type Database = {
       }
     }
     Functions: {
-      dashboard_stats: { Args: Record<string, never>; Returns: Json }
       gdpr_purge: { Args: { dry_run?: boolean }; Returns: Json }
       is_active_member: { Args: { uid?: string }; Returns: boolean }
       is_admin: { Args: { uid?: string }; Returns: boolean }
       normalize_regnr: { Args: { input: string }; Returns: string }
+      search_leaderboard: {
+        Args: { limit_n?: number }
+        Returns: {
+          category: string
+          hits: number
+          label: string
+        }[]
+      }
       search_all: {
         Args: { q: string }
         Returns: {
@@ -645,3 +703,6 @@ export type ObservationImage = Tables<'observation_images'>
 export type LogbookImage = Tables<'logbook_images'>
 export type UserRole = Enums<'user_role'>
 export type SearchResult = PublicSchema['Functions']['search_all']['Returns'][number]
+export type FuelGauge = Tables<'fuel_gauge'>
+export type SearchLog = Tables<'search_logs'>
+export type SearchLeaderboardRow = PublicSchema['Functions']['search_leaderboard']['Returns'][number]
