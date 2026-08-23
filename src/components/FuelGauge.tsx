@@ -98,13 +98,23 @@ export function FuelGauge() {
       if (user) await setFuelLevel(finalLevel, user.id)
     }
 
+    // pointercancel betyder att draget avbröts av webbläsaren (t.ex. att den
+    // tolkade det som en scroll-gest på mobilen) — koordinaterna i det eventet
+    // är inte tillförlitliga (ofta 0,0), så det ska INTE sparas, bara avbrytas
+    // och återgå till senast sparade värde. Att spara här var buggen som gjorde
+    // att mätaren "slängde sig" mot E på mobilen.
+    function onCancel() {
+      setDragging(false)
+      setDragLevel(null)
+    }
+
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
-    window.addEventListener('pointercancel', onUp)
+    window.addEventListener('pointercancel', onCancel)
     return () => {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
-      window.removeEventListener('pointercancel', onUp)
+      window.removeEventListener('pointercancel', onCancel)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dragging, user])
@@ -128,7 +138,12 @@ export function FuelGauge() {
           {editing ? 'Klar' : 'Ändra'}
         </Button>
       </div>
-      <svg ref={svgRef} viewBox="0 0 200 120" className="mx-auto w-full max-w-xs select-none">
+      <svg
+        ref={svgRef}
+        viewBox="0 0 200 120"
+        className="mx-auto w-full max-w-xs select-none"
+        style={{ touchAction: 'none' }}
+      >
         <path d={progressArcPath(100)} fill="none" stroke="#e2e8f0" strokeWidth={14} strokeLinecap="round" />
         <path d={progressArcPath(level)} fill="none" stroke={levelColor(level)} strokeWidth={14} strokeLinecap="round" />
         <text x={16} y={112} className="fill-slate-500" fontSize={12} fontWeight={600}>E</text>
@@ -136,11 +151,28 @@ export function FuelGauge() {
         <line x1={CX} y1={CY} x2={needleTip.x} y2={needleTip.y} stroke="#1e293b" strokeWidth={3} strokeLinecap="round" />
         <circle cx={CX} cy={CY} r={7} fill="#1e293b" />
         {editing && (
-          <g className="touch-none" style={{ cursor: 'grab' }} onPointerDown={handlePointerDown}>
+          <g
+            style={{ cursor: 'grab', touchAction: 'none' }}
+            onPointerDown={handlePointerDown}
+          >
             {/* Osynlig, betydligt större träffyta — den synliga cirkeln är för liten att
                 greppa med fingret på mobil, särskilt om handen skakar lite. */}
-            <circle cx={handlePos.x} cy={handlePos.y} r={HANDLE_HIT_R} fill="transparent" />
-            <circle cx={handlePos.x} cy={handlePos.y} r={HANDLE_R} fill="#fff" stroke="#1e293b" strokeWidth={3} />
+            <circle
+              cx={handlePos.x}
+              cy={handlePos.y}
+              r={HANDLE_HIT_R}
+              fill="transparent"
+              style={{ touchAction: 'none', pointerEvents: 'all' }}
+            />
+            <circle
+              cx={handlePos.x}
+              cy={handlePos.y}
+              r={HANDLE_R}
+              fill="#fff"
+              stroke="#1e293b"
+              strokeWidth={3}
+              style={{ touchAction: 'none', pointerEvents: 'all' }}
+            />
           </g>
         )}
         <text x={CX} y={CY + 34} textAnchor="middle" className="fill-brand-800" fontSize={20} fontWeight={700}>
