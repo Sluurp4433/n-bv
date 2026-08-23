@@ -8,7 +8,8 @@ import { Button, Card, LoadingState } from './ui'
 const CX = 100
 const CY = 100
 const R = 78
-const HANDLE_R = 12
+const HANDLE_R = 14
+const HANDLE_HIT_R = 22
 
 function angleFor(level: number) {
   return 180 * (1 - level / 100)
@@ -67,7 +68,7 @@ export function FuelGauge() {
 
   // Draget hakas bara på själva visarhandtaget, och bara i redigeringsläge —
   // ett oavsiktligt svep över kortet ska inte kunna ändra värdet.
-  function handlePointerDown(e: React.PointerEvent<SVGCircleElement>) {
+  function handlePointerDown(e: React.PointerEvent<SVGGElement>) {
     if (!user || !editing) return
     const svg = e.currentTarget.ownerSVGElement
     if (!svg) return
@@ -76,14 +77,14 @@ export function FuelGauge() {
     setDragLevel(levelFromPoint(e.clientX, e.clientY, svg))
   }
 
-  function handlePointerMove(e: React.PointerEvent<SVGCircleElement>) {
+  function handlePointerMove(e: React.PointerEvent<SVGGElement>) {
     if (!dragging) return
     const svg = e.currentTarget.ownerSVGElement
     if (!svg) return
     setDragLevel(levelFromPoint(e.clientX, e.clientY, svg))
   }
 
-  async function handlePointerUp(e: React.PointerEvent<SVGCircleElement>) {
+  async function handlePointerUp(e: React.PointerEvent<SVGGElement>) {
     if (!dragging || !user) return
     setDragging(false)
     const svg = e.currentTarget.ownerSVGElement
@@ -120,19 +121,18 @@ export function FuelGauge() {
         <line x1={CX} y1={CY} x2={needleTip.x} y2={needleTip.y} stroke="#1e293b" strokeWidth={3} strokeLinecap="round" />
         <circle cx={CX} cy={CY} r={7} fill="#1e293b" />
         {editing && (
-          <circle
-            cx={handlePos.x}
-            cy={handlePos.y}
-            r={HANDLE_R}
-            fill="#fff"
-            stroke="#1e293b"
-            strokeWidth={3}
+          <g
             className="touch-none"
             style={{ cursor: 'grab' }}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
-          />
+          >
+            {/* Osynlig, betydligt större träffyta — den synliga cirkeln är för liten att
+                greppa med fingret på mobil, särskilt om handen skakar lite. */}
+            <circle cx={handlePos.x} cy={handlePos.y} r={HANDLE_HIT_R} fill="transparent" />
+            <circle cx={handlePos.x} cy={handlePos.y} r={HANDLE_R} fill="#fff" stroke="#1e293b" strokeWidth={3} />
+          </g>
         )}
         <text x={CX} y={CY + 34} textAnchor="middle" className="fill-brand-800" fontSize={20} fontWeight={700}>
           {level}%
