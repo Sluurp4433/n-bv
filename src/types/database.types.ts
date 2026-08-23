@@ -542,6 +542,7 @@ export type Database = {
           registration_number: string
           updated_at: string
           vehicle_type: string | null
+          year_model: number | null
         }
         Insert: {
           color?: string | null
@@ -554,6 +555,7 @@ export type Database = {
           registration_number: string
           updated_at?: string
           vehicle_type?: string | null
+          year_model?: number | null
         }
         Update: {
           color?: string | null
@@ -566,6 +568,7 @@ export type Database = {
           registration_number?: string
           updated_at?: string
           vehicle_type?: string | null
+          year_model?: number | null
         }
         Relationships: []
       }
@@ -637,6 +640,7 @@ export type Database = {
           registration_number: string | null
           updated_at: string | null
           vehicle_type: string | null
+          year_model: number | null
         }
         Relationships: []
       }

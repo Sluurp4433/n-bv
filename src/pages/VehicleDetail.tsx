@@ -81,8 +81,9 @@ export function VehicleDetail() {
           <div>
             <h1 className="text-2xl font-bold text-brand-800">{vehicle.registration_number}</h1>
             <p className="mt-1 text-slate-600">
-              {[vehicle.make, vehicle.model, vehicle.color].filter(Boolean).join(' · ') ||
-                'Inga fordonsdetaljer registrerade'}
+              {[vehicle.make, vehicle.model, vehicle.color, vehicle.year_model ? String(vehicle.year_model) : null]
+                .filter(Boolean)
+                .join(' · ') || 'Inga fordonsdetaljer registrerade'}
             </p>
           </div>
           <Badge color="blue">{observations.length} observationer</Badge>
@@ -93,6 +94,7 @@ export function VehicleDetail() {
           <Detail label="Modell" value={vehicle.model} />
           <Detail label="Färg" value={vehicle.color} />
           <Detail label="Fordonstyp" value={vehicle.vehicle_type} />
+          <Detail label="Årsmodell" value={vehicle.year_model ? String(vehicle.year_model) : null} />
         </dl>
 
         {vehicle.notes && (
@@ -183,6 +185,7 @@ type EditValues = {
   model: string
   color: string
   vehicle_type: string
+  year_model: string
   notes: string
 }
 
@@ -205,6 +208,7 @@ function VehicleEditModal({
       model: vehicle.model ?? '',
       color: vehicle.color ?? '',
       vehicle_type: vehicle.vehicle_type ?? '',
+      year_model: vehicle.year_model != null ? String(vehicle.year_model) : '',
       notes: vehicle.notes ?? '',
     },
   })
@@ -218,6 +222,7 @@ function VehicleEditModal({
         model: values.model || null,
         color: values.color || null,
         vehicle_type: values.vehicle_type || null,
+        year_model: values.year_model ? Number(values.year_model) : null,
         notes: values.notes || null,
       })
       .eq('id', vehicle.id)
@@ -267,6 +272,9 @@ function VehicleEditModal({
                 </option>
               ))}
             </Select>
+          </Field>
+          <Field label="Årsmodell" htmlFor="e-year">
+            <Input id="e-year" type="number" inputMode="numeric" {...register('year_model')} />
           </Field>
         </div>
         <Field label="Övrigt" htmlFor="e-notes">

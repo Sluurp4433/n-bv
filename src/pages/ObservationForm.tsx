@@ -48,6 +48,7 @@ export function ObservationForm() {
   const [model, setModel] = useState('')
   const [color, setColor] = useState('')
   const [vehicleType, setVehicleType] = useState('')
+  const [yearModel, setYearModel] = useState('')
 
   // Person
   const [personOpen, setPersonOpen] = useState(false)
@@ -110,6 +111,7 @@ export function ObservationForm() {
       setModel(vehicle.model ?? '')
       setColor(vehicle.color ?? '')
       setVehicleType(vehicle.vehicle_type ?? '')
+      setYearModel(vehicle.year_model != null ? String(vehicle.year_model) : '')
     }
     setExistingPersons(
       (persons as any[]).map((pl) => {
@@ -172,7 +174,14 @@ export function ObservationForm() {
       if (!obsId) throw new Error('no id')
 
       // Fordon
-      const vehicleId = await upsertVehicle({ registration_number: regnr, make, model, color, vehicle_type: vehicleType })
+      const vehicleId = await upsertVehicle({
+        registration_number: regnr,
+        make,
+        model,
+        color,
+        vehicle_type: vehicleType,
+        year_model: yearModel ? Number(yearModel) : null,
+      })
       if (vehicleId) await linkVehicle(obsId, vehicleId)
 
       // Person (+ personens fordon)
@@ -304,7 +313,7 @@ export function ObservationForm() {
             <>
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="font-semibold text-brand-800">Fordon</h2>
-                <button type="button" onClick={() => { setVehicleOpen(false); setRegnr(''); setMake(''); setModel(''); setColor(''); setVehicleType('') }} className="text-sm text-slate-400 hover:text-red-600">Ta bort</button>
+                <button type="button" onClick={() => { setVehicleOpen(false); setRegnr(''); setMake(''); setModel(''); setColor(''); setVehicleType(''); setYearModel('') }} className="text-sm text-slate-400 hover:text-red-600">Ta bort</button>
               </div>
               <div className="space-y-4">
                 <Field label="Registreringsnummer" htmlFor="regnr">
@@ -314,10 +323,20 @@ export function ObservationForm() {
                   <p className="mb-1.5 text-sm font-medium text-slate-700">Fordonstyp</p>
                   <ChipSelect value={vehicleType} onChange={setVehicleType} options={strOpts(VEHICLE_TYPES)} />
                 </div>
-                <div className="grid gap-4 sm:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-4">
                   <Field label="Märke" htmlFor="make"><Input id="make" value={make} onChange={(e) => setMake(e.target.value)} placeholder="Volvo" /></Field>
                   <Field label="Modell" htmlFor="model"><Input id="model" value={model} onChange={(e) => setModel(e.target.value)} placeholder="V70" /></Field>
                   <Field label="Färg" htmlFor="color"><Input id="color" value={color} onChange={(e) => setColor(e.target.value)} placeholder="Svart" /></Field>
+                  <Field label="Årsmodell" htmlFor="year-model">
+                    <Input
+                      id="year-model"
+                      type="number"
+                      inputMode="numeric"
+                      value={yearModel}
+                      onChange={(e) => setYearModel(e.target.value)}
+                      placeholder="2018"
+                    />
+                  </Field>
                 </div>
               </div>
             </>
