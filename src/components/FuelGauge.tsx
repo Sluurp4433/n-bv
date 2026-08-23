@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import { useProfiles, creatorName } from '../lib/hooks'
 import { useFuelGauge, useSetFuelLevel } from '../lib/fuel'
@@ -34,19 +34,18 @@ function levelColor(level: number) {
   return '#1f7a4d'
 }
 
-/** Räknar om en skärmpunkt till en nivå 0-100, relativt mätarens SVG. */
-function levelFromPoint(clientX: number, clientY: number, svg: SVGSVGElement): number {
+/**
+ * Räknar om en skärmpunkt till en nivå 0-100, relativt mätarens SVG.
+ * Följer bara pekarens horisontella position (E till vänster, F till höger) —
+ * inte vinkeln från mittpunkten. En vinkelberäkning (atan2) fastnar i praktiken
+ * så fort fingret glider under mätarens mittlinje.
+ */
+function levelFromPoint(clientX: number, svg: SVGSVGElement): number {
   const rect = svg.getBoundingClientRect()
   const scaleX = 200 / rect.width
-  const scaleY = 120 / rect.height
   const x = (clientX - rect.left) * scaleX
-  const y = (clientY - rect.top) * scaleY
-  const dx = x - CX
-  const dy = CY - y
-  let angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI
-  if (angleDeg < 0) angleDeg = dx >= 0 ? 0 : 180
-  angleDeg = Math.min(180, Math.max(0, angleDeg))
-  return Math.round(100 * (1 - angleDeg / 180))
+  const level = ((x - (CX - R)) / (2 * R)) * 100
+  return Math.round(Math.min(100, Math.max(0, level)))
 }
 
 export function FuelGauge() {
@@ -54,6 +53,7 @@ export function FuelGauge() {
   const { map } = useProfiles()
   const fuel = useFuelGauge()
   const setFuelLevel = useSetFuelLevel()
+  const svgRef = useRef<SVGSVGElement>(null)
   const [editing, setEditing] = useState(false)
   const [dragLevel, setDragLevel] = useState<number | null>(null)
   const [dragging, setDragging] = useState(false)
@@ -70,29 +70,44 @@ export function FuelGauge() {
   // ett oavsiktligt svep över kortet ska inte kunna ändra värdet.
   function handlePointerDown(e: React.PointerEvent<SVGGElement>) {
     if (!user || !editing) return
-    const svg = e.currentTarget.ownerSVGElement
+    e.preventDefault()
+    const svg = svgRef.current
     if (!svg) return
-    e.currentTarget.setPointerCapture(e.pointerId)
     setDragging(true)
-    setDragLevel(levelFromPoint(e.clientX, e.clientY, svg))
+    setDragLevel(levelFromPoint(e.clientX, svg))
   }
 
-  function handlePointerMove(e: React.PointerEvent<SVGGElement>) {
-    if (!dragging) return
-    const svg = e.currentTarget.ownerSVGElement
-    if (!svg) return
-    setDragLevel(levelFromPoint(e.clientX, e.clientY, svg))
-  }
-
-  async function handlePointerUp(e: React.PointerEvent<SVGGElement>) {
+  // Lyssnare på window (inte på handtaget) medan man drar — handtaget flyttar sig
+  // varje frame, och att låta träffytan själv hänga med i draget gjorde att grepp
+  // ibland tappades halvvägs (särskilt på mobil). Window-lyssnare kan inte tappas.
+  useEffect(() => {
     if (!dragging || !user) return
-    setDragging(false)
-    const svg = e.currentTarget.ownerSVGElement
-    const finalLevel = svg ? levelFromPoint(e.clientX, e.clientY, svg) : level
-    setDragLevel(finalLevel)
-    await setFuelLevel(finalLevel, user.id)
-    setEditing(false)
-  }
+
+    function onMove(e: PointerEvent) {
+      const svg = svgRef.current
+      if (!svg) return
+      setDragLevel(levelFromPoint(e.clientX, svg))
+    }
+
+    async function onUp(e: PointerEvent) {
+      setDragging(false)
+      const svg = svgRef.current
+      const finalLevel = svg ? levelFromPoint(e.clientX, svg) : level
+      setDragLevel(finalLevel)
+      setEditing(false)
+      if (user) await setFuelLevel(finalLevel, user.id)
+    }
+
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dragging, user])
 
   if (fuel.isLoading) {
     return (
@@ -113,7 +128,7 @@ export function FuelGauge() {
           {editing ? 'Klar' : 'Ändra'}
         </Button>
       </div>
-      <svg viewBox="0 0 200 120" className="mx-auto w-full max-w-xs select-none">
+      <svg ref={svgRef} viewBox="0 0 200 120" className="mx-auto w-full max-w-xs select-none">
         <path d={progressArcPath(100)} fill="none" stroke="#e2e8f0" strokeWidth={14} strokeLinecap="round" />
         <path d={progressArcPath(level)} fill="none" stroke={levelColor(level)} strokeWidth={14} strokeLinecap="round" />
         <text x={16} y={112} className="fill-slate-500" fontSize={12} fontWeight={600}>E</text>
@@ -121,13 +136,7 @@ export function FuelGauge() {
         <line x1={CX} y1={CY} x2={needleTip.x} y2={needleTip.y} stroke="#1e293b" strokeWidth={3} strokeLinecap="round" />
         <circle cx={CX} cy={CY} r={7} fill="#1e293b" />
         {editing && (
-          <g
-            className="touch-none"
-            style={{ cursor: 'grab' }}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-          >
+          <g className="touch-none" style={{ cursor: 'grab' }} onPointerDown={handlePointerDown}>
             {/* Osynlig, betydligt större träffyta — den synliga cirkeln är för liten att
                 greppa med fingret på mobil, särskilt om handen skakar lite. */}
             <circle cx={handlePos.x} cy={handlePos.y} r={HANDLE_HIT_R} fill="transparent" />
