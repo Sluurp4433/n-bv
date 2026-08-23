@@ -6,8 +6,10 @@ import { supabase } from '../lib/supabase'
 import { Card, LoadingState, PageHeader } from '../components/ui'
 import type { SearchLeaderboardRow } from '../types/database.types'
 
-type ShiftBookingRow = { shift_id: string; shifts: { starts_at: string; uses_guard_car: boolean } | null }
+type ShiftRow = { starts_at: string; ends_at: string; uses_guard_car: boolean }
 type PostRow = { at: string }
+
+const MIN_SHIFT_HOURS = 2
 
 function useSearchLeaderboard() {
   return useQuery({
@@ -20,16 +22,23 @@ function useSearchLeaderboard() {
   })
 }
 
-function useShiftBookings() {
+function useShifts() {
   return useQuery({
-    queryKey: ['stats_shift_bookings'],
-    queryFn: async (): Promise<ShiftBookingRow[]> => {
-      const { data, error } = await supabase
-        .from('shift_bookings')
-        .select('shift_id, shifts(starts_at, uses_guard_car)')
+    queryKey: ['stats_shifts'],
+    queryFn: async (): Promise<ShiftRow[]> => {
+      const { data, error } = await supabase.from('shifts').select('starts_at, ends_at, uses_guard_car')
       if (error) throw error
-      return (data ?? []) as unknown as ShiftBookingRow[]
+      return data ?? []
     },
+  })
+}
+
+/** Ett bokat pass räknas i statistiken oavsett hur många som är bokade på det —
+ * kravet är bara att passet är minst MIN_SHIFT_HOURS långt. */
+function qualifyingShifts(shifts: ShiftRow[]) {
+  return shifts.filter((s) => {
+    const hours = (new Date(s.ends_at).getTime() - new Date(s.starts_at).getTime()) / 3_600_000
+    return hours >= MIN_SHIFT_HOURS
   })
 }
 
@@ -73,7 +82,7 @@ function bucketKeyYear(d: Date) {
 
 export function Stats() {
   const leaderboard = useSearchLeaderboard()
-  const bookings = useShiftBookings()
+  const shifts = useShifts()
   const posts = usePosts()
 
   const searchByCategory = useMemo(() => {
@@ -88,29 +97,27 @@ export function Stats() {
   const shiftMonthly = useMemo(() => {
     const keys = recentBuckets(12, startOfMonth, subMonths, 'yyyy-MM')
     const map = new Map<string, { guard: number; own: number }>(keys.map((k) => [k, { guard: 0, own: 0 }]))
-    for (const b of bookings.data ?? []) {
-      if (!b.shifts) continue
-      const key = bucketKeyMonth(new Date(b.shifts.starts_at))
+    for (const s of qualifyingShifts(shifts.data ?? [])) {
+      const key = bucketKeyMonth(new Date(s.starts_at))
       const bucket = map.get(key)
       if (!bucket) continue
-      if (b.shifts.uses_guard_car) bucket.guard++
+      if (s.uses_guard_car) bucket.guard++
       else bucket.own++
     }
     return keys.map((k) => ({ key: k, ...map.get(k)! }))
-  }, [bookings.data])
+  }, [shifts.data])
 
   const shiftYearly = useMemo(() => {
     const map = new Map<string, { guard: number; own: number }>()
-    for (const b of bookings.data ?? []) {
-      if (!b.shifts) continue
-      const key = bucketKeyYear(new Date(b.shifts.starts_at))
+    for (const s of qualifyingShifts(shifts.data ?? [])) {
+      const key = bucketKeyYear(new Date(s.starts_at))
       const bucket = map.get(key) ?? { guard: 0, own: 0 }
-      if (b.shifts.uses_guard_car) bucket.guard++
+      if (s.uses_guard_car) bucket.guard++
       else bucket.own++
       map.set(key, bucket)
     }
     return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([key, v]) => ({ key, ...v }))
-  }, [bookings.data])
+  }, [shifts.data])
 
   const postsWeekly = useMemo(() => {
     const keys = recentBuckets(8, (d) => startOfWeek(d, { weekStartsOn: 1 }), subWeeks, 'yyyy-MM-dd')
@@ -162,7 +169,10 @@ export function Stats() {
       {/* Körpass */}
       <div className="mb-8">
         <h2 className="mb-3 text-lg font-semibold text-brand-800">Körpass</h2>
-        {bookings.isLoading ? (
+        <p className="mb-3 text-sm text-slate-500">
+          Räknar antal bokade pass (inte antal bokade personer) — pass under {MIN_SHIFT_HOURS} timmar räknas inte.
+        </p>
+        {shifts.isLoading ? (
           <LoadingState />
         ) : (
           <div className="grid gap-4 lg:grid-cols-2">
