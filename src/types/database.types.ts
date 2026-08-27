@@ -500,6 +500,30 @@ export type Database = {
         }
         Relationships: []
       }
+      shift_history: {
+        Row: {
+          ends_at: string
+          recorded_at: string
+          shift_id: string
+          starts_at: string
+          uses_guard_car: boolean
+        }
+        Insert: {
+          ends_at: string
+          recorded_at?: string
+          shift_id: string
+          starts_at: string
+          uses_guard_car: boolean
+        }
+        Update: {
+          ends_at?: string
+          recorded_at?: string
+          shift_id?: string
+          starts_at?: string
+          uses_guard_car?: boolean
+        }
+        Relationships: []
+      }
       shift_bookings: {
         Row: {
           created_at: string
@@ -648,6 +672,7 @@ export type Database = {
     Functions: {
       gdpr_purge: { Args: { dry_run?: boolean }; Returns: Json }
       is_active_member: { Args: { uid?: string }; Returns: boolean }
+      lock_in_completed_shifts: { Args: Record<string, never>; Returns: number }
       is_admin: { Args: { uid?: string }; Returns: boolean }
       normalize_regnr: { Args: { input: string }; Returns: string }
       search_leaderboard: {

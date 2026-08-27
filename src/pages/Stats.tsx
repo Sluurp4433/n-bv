@@ -22,13 +22,31 @@ function useSearchLeaderboard() {
   })
 }
 
+/**
+ * Slår ihop levande pass (kommande + ännu ej inlåsta) med den permanenta
+ * historiken (public.shift_history) — pass vars sluttid passerat låses in där
+ * automatiskt och kan inte försvinna ur statistiken även om själva passet
+ * raderas i efterhand. Om ett pass finns i båda källorna vinner den levande
+ * versionen (t.ex. om det redigerats efter att det låstes in).
+ */
 function useShifts() {
   return useQuery({
     queryKey: ['stats_shifts'],
     queryFn: async (): Promise<ShiftRow[]> => {
-      const { data, error } = await supabase.from('shifts').select('starts_at, ends_at, uses_guard_car')
-      if (error) throw error
-      return data ?? []
+      const [live, history] = await Promise.all([
+        supabase.from('shifts').select('id, starts_at, ends_at, uses_guard_car'),
+        supabase.from('shift_history').select('shift_id, starts_at, ends_at, uses_guard_car'),
+      ])
+      if (live.error) throw live.error
+      if (history.error) throw history.error
+      const byId = new Map<string, ShiftRow>()
+      for (const h of history.data ?? []) {
+        byId.set(h.shift_id, { starts_at: h.starts_at, ends_at: h.ends_at, uses_guard_car: h.uses_guard_car })
+      }
+      for (const s of live.data ?? []) {
+        byId.set(s.id, { starts_at: s.starts_at, ends_at: s.ends_at, uses_guard_car: s.uses_guard_car })
+      }
+      return Array.from(byId.values())
     },
   })
 }
