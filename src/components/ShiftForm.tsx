@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/AuthProvider'
@@ -37,6 +37,20 @@ function defaultTimes(day?: Date) {
   return { start: toDatetimeLocal(base), end: toDatetimeLocal(end) }
 }
 
+function buildDefaults(day?: Date): FormValues {
+  const times = defaultTimes(day)
+  return {
+    starts_at: times.start,
+    ends_at: times.end,
+    capacity: 2,
+    title: '',
+    location: '',
+    notes: '',
+    bookSelf: true,
+    usesGuardCar: true,
+  }
+}
+
 export function ShiftForm({
   open,
   onClose,
@@ -51,23 +65,24 @@ export function ShiftForm({
   const { user } = useAuth()
   const toast = useToast()
   const qc = useQueryClient()
-  const times = defaultTimes(day)
   const [others, setOthers] = useState<string[]>([])
 
   const { register, handleSubmit, setError, reset, watch, setValue, formState } = useForm<FormValues>({
-    defaultValues: {
-      starts_at: times.start,
-      ends_at: times.end,
-      capacity: 2,
-      title: '',
-      location: '',
-      notes: '',
-      bookSelf: true,
-      usesGuardCar: true,
-    },
+    defaultValues: buildDefaults(day),
   })
   const usesGuardCar = watch('usesGuardCar')
   const startReg = register('starts_at', { required: true })
+
+  // react-hook-forms defaultValues sätts bara en gång vid initiering — de följer
+  // inte med automatiskt när `day` ändras på ett formulär som redan finns kvar i
+  // trädet (Modal döljer bara, avmonterar inte). Utan detta blev nya pass alltid
+  // förifyllda med den dag som råkade vara vald första gången modalen öppnades.
+  useEffect(() => {
+    if (!open) return
+    reset(buildDefaults(day))
+    setOthers([])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, day])
 
   async function onSubmit(values: FormValues) {
     if (new Date(values.ends_at) <= new Date(values.starts_at)) {
