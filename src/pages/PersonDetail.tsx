@@ -132,6 +132,22 @@ export function PersonDetail() {
       {/* Relaterade fordon */}
       <div className="mt-6">
         <h2 className="mb-2 font-semibold text-brand-800">Relaterade fordon</h2>
+
+        {canManage && (
+          <form onSubmit={addVehicle} className="mb-3 flex gap-2">
+            <Input
+              value={newVehicleRegnr}
+              onChange={(e) => setNewVehicleRegnr(e.target.value)}
+              placeholder="Registreringsnummer, t.ex. ABC123"
+              className="uppercase"
+              autoCapitalize="characters"
+            />
+            <Button type="submit" variant="secondary" loading={addingVehicle} disabled={!newVehicleRegnr.trim()}>
+              + Koppla fordon
+            </Button>
+          </form>
+        )}
+
         {vehicles.length === 0 ? (
           <p className="text-sm text-slate-400">Inga fordon kopplade.</p>
         ) : (
@@ -160,21 +176,6 @@ export function PersonDetail() {
               </Card>
             ))}
           </div>
-        )}
-
-        {canManage && (
-          <form onSubmit={addVehicle} className="mt-3 flex gap-2">
-            <Input
-              value={newVehicleRegnr}
-              onChange={(e) => setNewVehicleRegnr(e.target.value)}
-              placeholder="Registreringsnummer, t.ex. ABC123"
-              className="uppercase"
-              autoCapitalize="characters"
-            />
-            <Button type="submit" variant="secondary" loading={addingVehicle} disabled={!newVehicleRegnr.trim()}>
-              + Koppla fordon
-            </Button>
-          </form>
         )}
       </div>
 
