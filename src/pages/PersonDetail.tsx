@@ -8,10 +8,11 @@ import { useToast } from '../components/Toast'
 import { Modal, ConfirmDialog } from '../components/Modal'
 import { BackLink } from '../components/BackLink'
 import { ChipSelect, TagInput } from '../components/inputs'
-import { personName } from '../lib/persons'
+import { personName, linkPersonVehicle } from '../lib/persons'
+import { upsertVehicle } from '../lib/observations'
 import { GENDERS, genderLabel } from '../lib/constants'
 import { Badge, Button, Card, EmptyState, Field, Input, LoadingState, Textarea } from '../components/ui'
-import { formatDateTime } from '../lib/format'
+import { formatDateTime, normalizeRegnr } from '../lib/format'
 import type { Observation, Person, Vehicle } from '../types/database.types'
 
 export function PersonDetail() {
@@ -25,6 +26,9 @@ export function PersonDetail() {
   const [editOpen, setEditOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [newVehicleRegnr, setNewVehicleRegnr] = useState('')
+  const [addingVehicle, setAddingVehicle] = useState(false)
+  const [removingVehicleId, setRemovingVehicleId] = useState<string | null>(null)
 
   const query = useQuery({
     queryKey: ['person', id],
@@ -48,6 +52,38 @@ export function PersonDetail() {
 
   const { person, observations, vehicles } = query.data
   const canManage = canEditOwn(person.created_by, person.created_at, user?.id, isAdmin, settings?.edit_window_hours)
+
+  async function addVehicle(e: React.FormEvent) {
+    e.preventDefault()
+    const norm = normalizeRegnr(newVehicleRegnr)
+    if (!norm) return
+    setAddingVehicle(true)
+    try {
+      const vehicleId = await upsertVehicle({ registration_number: newVehicleRegnr })
+      if (!vehicleId) throw new Error('no vehicle id')
+      await linkPersonVehicle(person.id, vehicleId)
+      setNewVehicleRegnr('')
+      qc.invalidateQueries({ queryKey: ['person', id] })
+      toast.success('Fordonet har kopplats till personen.')
+    } catch {
+      toast.error('Kunde inte koppla fordonet.')
+    } finally {
+      setAddingVehicle(false)
+    }
+  }
+
+  async function removeVehicle(vehicleId: string) {
+    setRemovingVehicleId(vehicleId)
+    const { error } = await supabase
+      .from('person_vehicles')
+      .delete()
+      .eq('person_id', person.id)
+      .eq('vehicle_id', vehicleId)
+    setRemovingVehicleId(null)
+    if (error) return toast.error('Kunde inte ta bort kopplingen.')
+    qc.invalidateQueries({ queryKey: ['person', id] })
+    toast.success('Kopplingen har tagits bort.')
+  }
 
   async function handleDelete() {
     setDeleting(true)
@@ -101,17 +137,44 @@ export function PersonDetail() {
         ) : (
           <div className="space-y-2">
             {vehicles.map((v) => (
-              <Link key={v.id} to={`/fordon/${v.id}`}>
-                <Card className="flex items-center justify-between p-4 transition-shadow hover:shadow-md">
-                  <div>
-                    <div className="font-semibold text-brand-700">{v.registration_number}</div>
-                    <div className="text-sm text-slate-500">{[v.make, v.model, v.color].filter(Boolean).join(' · ') || 'Inga detaljer'}</div>
-                  </div>
-                  <span className="text-slate-400">›</span>
-                </Card>
-              </Link>
+              <Card key={v.id} className="flex items-center justify-between p-4 transition-shadow hover:shadow-md">
+                <Link to={`/fordon/${v.id}`} className="flex-1">
+                  <div className="font-semibold text-brand-700">{v.registration_number}</div>
+                  <div className="text-sm text-slate-500">{[v.make, v.model, v.color].filter(Boolean).join(' · ') || 'Inga detaljer'}</div>
+                </Link>
+                {canManage ? (
+                  <Button
+                    variant="ghost"
+                    size="md"
+                    className="!px-2 !py-1 text-xs text-slate-400 hover:text-red-600"
+                    loading={removingVehicleId === v.id}
+                    onClick={() => removeVehicle(v.id)}
+                  >
+                    Ta bort
+                  </Button>
+                ) : (
+                  <Link to={`/fordon/${v.id}`}>
+                    <span className="text-slate-400">›</span>
+                  </Link>
+                )}
+              </Card>
             ))}
           </div>
+        )}
+
+        {canManage && (
+          <form onSubmit={addVehicle} className="mt-3 flex gap-2">
+            <Input
+              value={newVehicleRegnr}
+              onChange={(e) => setNewVehicleRegnr(e.target.value)}
+              placeholder="Registreringsnummer, t.ex. ABC123"
+              className="uppercase"
+              autoCapitalize="characters"
+            />
+            <Button type="submit" variant="secondary" loading={addingVehicle} disabled={!newVehicleRegnr.trim()}>
+              + Koppla fordon
+            </Button>
+          </form>
         )}
       </div>
 
