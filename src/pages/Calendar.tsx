@@ -32,6 +32,7 @@ export function Calendar() {
   const [createDay, setCreateDay] = useState<Date | undefined>(undefined)
   const [memberFilter, setMemberFilter] = useState('')
   const [onlyMine, setOnlyMine] = useState(false)
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null)
 
   const gridStart = startOfWeek(startOfMonth(monthCursor), { weekStartsOn: 1 })
   const gridEnd = endOfWeek(endOfMonth(monthCursor), { weekStartsOn: 1 })
@@ -59,9 +60,17 @@ export function Calendar() {
     setCreateOpen(true)
   }
 
-  const daysWithShifts = days.filter(
-    (d) => isSameMonth(d, monthCursor) && (byDay.get(format(d, 'yyyy-MM-dd'))?.length ?? 0) > 0
-  )
+  // Vald dag i mobilvyn — faller tillbaka till idag (om den visade månaden
+  // innehåller idag) annars första dagen i månaden, så det alltid finns en
+  // giltig dag att visa passlistan för.
+  const today = new Date()
+  const activeDay =
+    selectedDay && isSameMonth(selectedDay, monthCursor)
+      ? selectedDay
+      : isSameMonth(today, monthCursor)
+        ? today
+        : monthCursor
+  const activeDayShifts = byDay.get(format(activeDay, 'yyyy-MM-dd')) ?? []
 
   return (
     <div>
@@ -132,25 +141,63 @@ export function Calendar() {
             </div>
           </Card>
 
-          {/* Agenda (mobil) */}
-          <div className="space-y-4 md:hidden">
-            {daysWithShifts.length === 0 ? (
-              <Card className="p-6 text-center text-sm text-slate-400">Inga pass den här månaden.</Card>
-            ) : (
-              daysWithShifts.map((day) => {
-                const key = format(day, 'yyyy-MM-dd')
-                return (
-                  <div key={key}>
-                    <h3 className="mb-2 text-sm font-semibold capitalize text-slate-600">{format(day, 'EEEE d MMMM', { locale: sv })}</h3>
-                    <div className="space-y-2">
-                      {(byDay.get(key) ?? []).map((s) => (
-                        <ShiftChip key={s.id} shift={s} map={map} userId={user?.id} avatarSize={42} onClick={() => navigate(`/kalender/pass/${s.id}`)} />
-                      ))}
-                    </div>
-                  </div>
-                )
-              })
-            )}
+          {/* Månadsvy (mobil) */}
+          <div className="md:hidden">
+            <Card className="overflow-hidden">
+              <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center text-[10px] font-medium uppercase text-slate-500">
+                {WEEKDAYS.map((d) => (<div key={d} className="py-1.5">{d.slice(0, 2)}</div>))}
+              </div>
+              <div className="grid grid-cols-7">
+                {days.map((day) => {
+                  const key = format(day, 'yyyy-MM-dd')
+                  const dayShifts = byDay.get(key) ?? []
+                  const inMonth = isSameMonth(day, monthCursor)
+                  const isToday = isSameDay(day, today)
+                  const isSelected = isSameDay(day, activeDay)
+                  const hasGuard = dayShifts.some((s) => s.uses_guard_car)
+                  const hasOwn = dayShifts.some((s) => !s.uses_guard_car)
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setSelectedDay(day)}
+                      className={cn(
+                        'flex h-12 flex-col items-center justify-center gap-1 border-b border-r border-slate-100',
+                        isSelected && 'bg-brand-50'
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'flex h-6 w-6 items-center justify-center rounded-full text-xs',
+                          isToday ? 'bg-brand-700 font-semibold text-white' : inMonth ? 'text-slate-700' : 'text-slate-300'
+                        )}
+                      >
+                        {format(day, 'd')}
+                      </span>
+                      <div className="flex h-1.5 gap-0.5">
+                        {hasGuard && <span className="h-1.5 w-1.5 rounded-full bg-red-500" />}
+                        {hasOwn && <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </Card>
+
+            <div className="mt-4">
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="text-sm font-semibold capitalize text-slate-600">{format(activeDay, 'EEEE d MMMM', { locale: sv })}</h3>
+                <button onClick={() => openCreate(activeDay)} className="text-sm font-medium text-brand-600 hover:underline">+ Lägg till pass</button>
+              </div>
+              {activeDayShifts.length === 0 ? (
+                <Card className="p-4 text-center text-sm text-slate-400">Inga pass den här dagen.</Card>
+              ) : (
+                <div className="space-y-2">
+                  {activeDayShifts.map((s) => (
+                    <ShiftChip key={s.id} shift={s} map={map} userId={user?.id} avatarSize={42} onClick={() => navigate(`/kalender/pass/${s.id}`)} />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </>
       )}
