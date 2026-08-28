@@ -6,4 +6,10 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   base: './',
   plugins: [react()],
+  // Egen fast port så npm run dev aldrig krockar med andra Vite-projekt
+  // (t.ex. Familjeplaneraren) som råkar köras samtidigt på standardporten 5173.
+  server: {
+    port: 5180,
+    strictPort: true,
+  },
 })
