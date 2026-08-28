@@ -362,6 +362,13 @@ function AuditTab() {
   const total = result.data?.count ?? 0
   const pages = Math.ceil(total / PAGE_SIZE)
 
+  // Saknad aktör (user_id null) uppstår bara vid direkta systemåtgärder mot
+  // databasen (t.ex. underhåll/tester utanför appen) — det är inte samma sak
+  // som "okänd medlem" (en riktig men borttagen/saknad profil).
+  function actorName(userId: string | null | undefined): string {
+    return userId ? creatorName(map, userId) : 'Systemtest'
+  }
+
   return (
     <div>
       {/* Desktop: tabell */}
@@ -383,7 +390,7 @@ function AuditTab() {
                 <td className="px-4 py-3 text-slate-800">
                   {actionLabel[a.action] ?? a.action} {tableLabel[a.table_name] ?? a.table_name}
                 </td>
-                <td className="px-4 py-3 text-slate-600">{creatorName(map, a.user_id)}</td>
+                <td className="px-4 py-3 text-slate-600">{actorName(a.user_id)}</td>
               </tr>
             ))}
           </tbody>
@@ -400,7 +407,7 @@ function AuditTab() {
               </span>
               <span className="shrink-0 text-xs text-slate-400">{formatDateTime(a.created_at)}</span>
             </div>
-            <div className="mt-0.5 text-xs text-slate-500">{creatorName(map, a.user_id)}</div>
+            <div className="mt-0.5 text-xs text-slate-500">{actorName(a.user_id)}</div>
           </Card>
         ))}
       </div>
