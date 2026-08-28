@@ -19,7 +19,7 @@ export const OBSERVATION_TYPES = [
 ] as const
 
 export const LOGBOOK_CATEGORIES = [
-  'Rondering',
+  'Körpass',
   'Möte',
   'Information',
   'Händelse',
