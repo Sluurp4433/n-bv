@@ -12,7 +12,7 @@ import {
   uploadObservationImage,
   upsertVehicle,
 } from '../lib/observations'
-import { createPerson, linkPersonObservation, linkPersonVehicle, personHasData } from '../lib/persons'
+import { clearPersonLinks, createPerson, linkPersonObservation, linkPersonVehicle, personHasData, personName } from '../lib/persons'
 import { OBSERVATION_CATEGORIES, OBSERVATION_TYPES, PRIORITIES, VEHICLE_TYPES, GENDERS } from '../lib/constants'
 import { toDatetimeLocal, normalizeRegnr } from '../lib/format'
 import { Alert, Button, Card, Field, Input, LoadingState, Textarea } from '../components/ui'
@@ -22,6 +22,28 @@ const strOpts = (arr: readonly string[]) => arr.map((v) => ({ value: v, label: v
 
 type NewImage = { file: File; caption: string; url: string }
 type ExistingImage = { id: string; file_path: string; caption: string | null; url: string | null }
+
+type VehicleDraft = { regnr: string; make: string; model: string; color: string; vehicleType: string; yearModel: string }
+
+type NewPersonDraft = {
+  kind: 'new'
+  firstName: string
+  lastName: string
+  gender: string
+  aliases: string[]
+  signalement: string
+  address: string
+  city: string
+  connections: string
+  personRegnrs: string[]
+}
+type ExistingPersonDraft = { kind: 'existing'; id: string; name: string }
+type PersonDraft = NewPersonDraft | ExistingPersonDraft
+
+function personDraftLabel(p: PersonDraft): string {
+  if (p.kind === 'existing') return p.name
+  return [p.firstName, p.lastName].filter(Boolean).join(' ') || p.aliases[0] || 'Ny person'
+}
 
 export function ObservationForm() {
   const { id } = useParams()
@@ -41,7 +63,8 @@ export function ObservationForm() {
   const [priority, setPriority] = useState('lag')
   const [notes, setNotes] = useState('')
 
-  // Fordon
+  // Fordon — lista + inmatningsformulär för ett i taget
+  const [vehicles, setVehicles] = useState<VehicleDraft[]>([])
   const [vehicleOpen, setVehicleOpen] = useState(false)
   const [regnr, setRegnr] = useState('')
   const [make, setMake] = useState('')
@@ -50,7 +73,10 @@ export function ObservationForm() {
   const [vehicleType, setVehicleType] = useState('')
   const [yearModel, setYearModel] = useState('')
 
-  // Person
+  // Personer — lista (befintliga via sök + nya via formulär, en i taget)
+  const [personDrafts, setPersonDrafts] = useState<PersonDraft[]>([])
+  const [personQuery, setPersonQuery] = useState('')
+  const [personResults, setPersonResults] = useState<{ id: string; name: string }[]>([])
   const [personOpen, setPersonOpen] = useState(false)
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -61,7 +87,6 @@ export function ObservationForm() {
   const [city, setCity] = useState('')
   const [connections, setConnections] = useState('')
   const [personRegnrs, setPersonRegnrs] = useState<string[]>([])
-  const [existingPersons, setExistingPersons] = useState<string[]>([])
 
   // Bilder
   const [newImages, setNewImages] = useState<NewImage[]>([])
@@ -76,27 +101,30 @@ export function ObservationForm() {
     queryFn: async () => {
       const { data: obs, error } = await supabase.from('observations').select('*').eq('id', id!).single()
       if (error) throw error
-      const { data: vlink } = await supabase
+      const { data: vlinks } = await supabase
         .from('observation_vehicles')
         .select('vehicles(*)')
         .eq('observation_id', id!)
-        .limit(1)
-        .maybeSingle()
       const { data: plinks } = await supabase
         .from('observation_persons')
-        .select('persons(first_name,last_name,aliases)')
+        .select('persons(id,first_name,last_name,aliases)')
         .eq('observation_id', id!)
       const { data: imgs } = await supabase
         .from('observation_images')
         .select('id,file_path,caption')
         .eq('observation_id', id!)
-      return { obs, vehicle: (vlink?.vehicles as any) ?? null, persons: plinks ?? [], images: imgs ?? [] }
+      return {
+        obs,
+        vehicles: (vlinks ?? []).map((l) => l.vehicles as any).filter(Boolean),
+        persons: (plinks ?? []).map((l) => l.persons as any).filter(Boolean),
+        images: imgs ?? [],
+      }
     },
   })
 
   useEffect(() => {
     if (!existing.data) return
-    const { obs, vehicle, persons, images } = existing.data
+    const { obs, vehicles: linkedVehicles, persons: linkedPersons, images } = existing.data
     setObservedAt(toDatetimeLocal(obs.observed_at))
     setDescription(obs.description ?? '')
     setLocation(obs.location ?? '')
@@ -104,21 +132,17 @@ export function ObservationForm() {
     setCategory(obs.category ?? '')
     setPriority(obs.priority ?? 'normal')
     setNotes(obs.notes ?? '')
-    if (vehicle) {
-      setVehicleOpen(true)
-      setRegnr(vehicle.registration_number ?? '')
-      setMake(vehicle.make ?? '')
-      setModel(vehicle.model ?? '')
-      setColor(vehicle.color ?? '')
-      setVehicleType(vehicle.vehicle_type ?? '')
-      setYearModel(vehicle.year_model != null ? String(vehicle.year_model) : '')
-    }
-    setExistingPersons(
-      (persons as any[]).map((pl) => {
-        const p = pl.persons
-        return [p?.first_name, p?.last_name].filter(Boolean).join(' ') || (p?.aliases?.[0] ?? 'Person')
-      })
+    setVehicles(
+      linkedVehicles.map((v: any) => ({
+        regnr: v.registration_number ?? '',
+        make: v.make ?? '',
+        model: v.model ?? '',
+        color: v.color ?? '',
+        vehicleType: v.vehicle_type ?? '',
+        yearModel: v.year_model != null ? String(v.year_model) : '',
+      }))
     )
+    setPersonDrafts(linkedPersons.map((p: any) => ({ kind: 'existing' as const, id: p.id, name: personName(p) })))
     ;(async () => {
       const resolved: ExistingImage[] = await Promise.all(
         (images as any[]).map(async (im) => ({ id: im.id, file_path: im.file_path, caption: im.caption, url: await observationImageUrl(im.file_path) }))
@@ -126,6 +150,28 @@ export function ObservationForm() {
       setExistingImages(resolved)
     })()
   }, [existing.data])
+
+  // Sök befintliga personer medan man skriver (min 2 tecken, liten fördröjning).
+  useEffect(() => {
+    const q = personQuery.trim()
+    if (q.length < 2) {
+      setPersonResults([])
+      return
+    }
+    let active = true
+    const t = setTimeout(async () => {
+      const { data } = await supabase
+        .from('persons')
+        .select('id, first_name, last_name, aliases')
+        .or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%`)
+        .limit(8)
+      if (active) setPersonResults((data ?? []).map((p) => ({ id: p.id, name: personName(p) })))
+    }, 250)
+    return () => {
+      active = false
+      clearTimeout(t)
+    }
+  }, [personQuery])
 
   function addImages(files: FileList | null) {
     if (!files) return
@@ -142,9 +188,68 @@ export function ObservationForm() {
     setExistingImages((prev) => prev.filter((x) => x.id !== img.id))
   }
 
+  // ---- Fordon: lägg till/ta bort i listan ----
+  function resetVehicleFields() {
+    setRegnr('')
+    setMake('')
+    setModel('')
+    setColor('')
+    setVehicleType('')
+    setYearModel('')
+  }
+  function currentVehicleDraft(): VehicleDraft | null {
+    return regnr.trim() ? { regnr, make, model, color, vehicleType, yearModel } : null
+  }
+  function addVehicleToList() {
+    const d = currentVehicleDraft()
+    if (!d) return
+    setVehicles((v) => [...v, d])
+    resetVehicleFields()
+  }
+  function removeVehicleFromList(i: number) {
+    setVehicles((v) => v.filter((_, j) => j !== i))
+  }
+
+  // ---- Personer: lägg till/ta bort i listan ----
+  function resetPersonFields() {
+    setFirstName('')
+    setLastName('')
+    setGender('')
+    setAliases([])
+    setSignalement('')
+    setAddress('')
+    setCity('')
+    setConnections('')
+    setPersonRegnrs([])
+  }
+  function currentNewPersonDraft(): NewPersonDraft | null {
+    if (!personHasData({ first_name: firstName, last_name: lastName, aliases })) return null
+    return { kind: 'new', firstName, lastName, gender, aliases, signalement, address, city, connections, personRegnrs }
+  }
+  function addNewPersonToList() {
+    const d = currentNewPersonDraft()
+    if (!d) return
+    setPersonDrafts((p) => [...p, d])
+    resetPersonFields()
+  }
+  function addExistingPersonToList(pid: string, name: string) {
+    if (personDrafts.some((p) => p.kind === 'existing' && p.id === pid)) return
+    setPersonDrafts((p) => [...p, { kind: 'existing', id: pid, name }])
+    setPersonQuery('')
+    setPersonResults([])
+  }
+  function removePersonFromList(i: number) {
+    setPersonDrafts((p) => p.filter((_, j) => j !== i))
+  }
+
   async function onSubmit() {
     setError(null)
-    if (!description.trim() && !regnr.trim() && !personHasData({ first_name: firstName, last_name: lastName, aliases }) && newImages.length === 0) {
+    const pendingVehicle = currentVehicleDraft()
+    const pendingPerson = currentNewPersonDraft()
+    const allVehicles = [...vehicles, ...(pendingVehicle ? [pendingVehicle] : [])]
+    const allPersons: PersonDraft[] = [...personDrafts, ...(pendingPerson ? [pendingPerson] : [])]
+
+    if (!description.trim() && allVehicles.length === 0 && allPersons.length === 0 && newImages.length === 0) {
       setError('Skriv en kort beskrivning (eller lägg till fordon/person/bild).')
       return
     }
@@ -166,6 +271,7 @@ export function ObservationForm() {
         const { error: e } = await supabase.from('observations').update(payload).eq('id', id!)
         if (e) throw e
         await clearVehicleLinks(id!)
+        await clearPersonLinks(id!)
       } else {
         const { data, error: e } = await supabase.from('observations').insert(payload).select('id').single()
         if (e || !data) throw e ?? new Error('insert failed')
@@ -174,23 +280,34 @@ export function ObservationForm() {
       if (!obsId) throw new Error('no id')
 
       // Fordon
-      const vehicleId = await upsertVehicle({
-        registration_number: regnr,
-        make,
-        model,
-        color,
-        vehicle_type: vehicleType,
-        year_model: yearModel ? Number(yearModel) : null,
-      })
-      if (vehicleId) await linkVehicle(obsId, vehicleId)
+      for (const v of allVehicles) {
+        const vehicleId = await upsertVehicle({
+          registration_number: v.regnr,
+          make: v.make,
+          model: v.model,
+          color: v.color,
+          vehicle_type: v.vehicleType,
+          year_model: v.yearModel ? Number(v.yearModel) : null,
+        })
+        if (vehicleId) await linkVehicle(obsId, vehicleId)
+      }
 
-      // Person (+ personens fordon)
-      const pInput = { first_name: firstName, last_name: lastName, gender, aliases, description: signalement, address, city, connections }
-      if (personHasData(pInput)) {
-        const personId = await createPerson(pInput)
-        if (personId) {
-          await linkPersonObservation(obsId, personId)
-          for (const r of personRegnrs) {
+      // Personer (+ ev. fordon kopplade till nya personer)
+      for (const p of allPersons) {
+        const personId = p.kind === 'existing' ? p.id : await createPerson({
+          first_name: p.firstName,
+          last_name: p.lastName,
+          gender: p.gender,
+          aliases: p.aliases,
+          description: p.signalement,
+          address: p.address,
+          city: p.city,
+          connections: p.connections,
+        })
+        if (!personId) continue
+        await linkPersonObservation(obsId, personId)
+        if (p.kind === 'new') {
+          for (const r of p.personRegnrs) {
             const vId = await upsertVehicle({ registration_number: r })
             if (vId) {
               await linkVehicle(obsId, vId)
@@ -218,6 +335,8 @@ export function ObservationForm() {
   }
 
   if (isEdit && existing.isLoading) return <LoadingState />
+
+  const visiblePersonResults = personResults.filter((r) => !personDrafts.some((p) => p.kind === 'existing' && p.id === r.id))
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -300,20 +419,32 @@ export function ObservationForm() {
           {newImages.length + existingImages.length < 8 && (
             <label className="mt-3 inline-block cursor-pointer">
               <span className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-medium text-white hover:bg-brand-800">📷 Lägg till bild</span>
-              <input type="file" accept="image/*" capture="environment" multiple className="hidden" onChange={(e) => { addImages(e.target.files); e.target.value = '' }} />
+              <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { addImages(e.target.files); e.target.value = '' }} />
             </label>
           )}
         </Card>
 
         {/* Fordon */}
         <Card className="p-5">
+          <h2 className="mb-2 font-semibold text-brand-800">Fordon</h2>
+          {vehicles.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {vehicles.map((v, i) => (
+                <span key={i} className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white py-1 pl-3 pr-1.5 text-sm">
+                  <span className="font-medium text-brand-700">{v.regnr}</span>
+                  {(v.make || v.model) && <span className="text-slate-500">{[v.make, v.model].filter(Boolean).join(' ')}</span>}
+                  <button type="button" onClick={() => removeVehicleFromList(i)} className="rounded-full p-0.5 text-slate-400 hover:text-red-600" aria-label="Ta bort fordon">✕</button>
+                </span>
+              ))}
+            </div>
+          )}
           {!vehicleOpen ? (
             <button type="button" onClick={() => setVehicleOpen(true)} className="font-medium text-brand-700 hover:underline">+ Lägg till fordon</button>
           ) : (
             <>
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="font-semibold text-brand-800">Fordon</h2>
-                <button type="button" onClick={() => { setVehicleOpen(false); setRegnr(''); setMake(''); setModel(''); setColor(''); setVehicleType(''); setYearModel('') }} className="text-sm text-slate-400 hover:text-red-600">Ta bort</button>
+                <h3 className="text-sm font-medium text-slate-600">Nytt fordon</h3>
+                <button type="button" onClick={() => { setVehicleOpen(false); resetVehicleFields() }} className="text-sm text-slate-400 hover:text-red-600">Avbryt</button>
               </div>
               <div className="space-y-4">
                 <Field label="Registreringsnummer" htmlFor="regnr">
@@ -338,6 +469,9 @@ export function ObservationForm() {
                     />
                   </Field>
                 </div>
+                <Button type="button" variant="secondary" onClick={addVehicleToList} disabled={!regnr.trim()}>
+                  + Lägg till i listan
+                </Button>
               </div>
             </>
           )}
@@ -345,43 +479,81 @@ export function ObservationForm() {
 
         {/* Person */}
         <Card className="p-5">
-          {existingPersons.length > 0 && (
-            <p className="mb-3 text-sm text-slate-500">Kopplade personer: {existingPersons.join(', ')}</p>
+          <h2 className="mb-2 font-semibold text-brand-800">Personer</h2>
+          {personDrafts.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {personDrafts.map((p, i) => (
+                <span key={i} className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white py-1 pl-3 pr-1.5 text-sm">
+                  <span className="font-medium text-brand-700">{personDraftLabel(p)}</span>
+                  {p.kind === 'new' && <span className="text-xs text-slate-400">(ny)</span>}
+                  <button type="button" onClick={() => removePersonFromList(i)} className="rounded-full p-0.5 text-slate-400 hover:text-red-600" aria-label="Ta bort person">✕</button>
+                </span>
+              ))}
+            </div>
           )}
-          {!personOpen ? (
-            <button type="button" onClick={() => setPersonOpen(true)} className="font-medium text-brand-700 hover:underline">+ Lägg till person</button>
-          ) : (
-            <>
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="font-semibold text-brand-800">Person</h2>
-                <button type="button" onClick={() => setPersonOpen(false)} className="text-sm text-slate-400 hover:text-red-600">Dölj</button>
-              </div>
-              <div className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Förnamn" htmlFor="fn"><Input id="fn" value={firstName} onChange={(e) => setFirstName(e.target.value)} /></Field>
-                  <Field label="Efternamn" htmlFor="ln"><Input id="ln" value={lastName} onChange={(e) => setLastName(e.target.value)} /></Field>
-                </div>
-                <div>
-                  <p className="mb-1.5 text-sm font-medium text-slate-700">Kön</p>
-                  <ChipSelect value={gender} onChange={setGender} options={GENDERS} />
-                </div>
-                <Field label="Andra namn / smeknamn" htmlFor="aliases" hint="Skriv och tryck Enter för varje namn.">
-                  <TagInput value={aliases} onChange={setAliases} placeholder="Lägg till namn…" />
-                </Field>
-                <Field label="Signalement" htmlFor="sign"><Textarea id="sign" rows={2} value={signalement} onChange={(e) => setSignalement(e.target.value)} placeholder="Utseende, klädsel…" /></Field>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Adress" htmlFor="addr"><Input id="addr" value={address} onChange={(e) => setAddress(e.target.value)} /></Field>
-                  <Field label="Ort" htmlFor="city"><Input id="city" value={city} onChange={(e) => setCity(e.target.value)} /></Field>
-                </div>
-                <Field label="Registreringsnummer" htmlFor="p-regnr" hint="Personens fordon. Skriv och tryck Enter.">
-                  <TagInput value={personRegnrs} onChange={setPersonRegnrs} placeholder="ABC123" transform={normalizeRegnr} />
-                </Field>
-                <Field label="Kopplingar" htmlFor="conn" hint="Fritext för att koppla ihop vid sökningar (t.ex. relationer, kända kontakter).">
-                  <Textarea id="conn" rows={2} value={connections} onChange={(e) => setConnections(e.target.value)} />
-                </Field>
-              </div>
-            </>
+
+          <Field label="Sök befintlig person" htmlFor="person-search" hint="Skriv minst 2 bokstäver för att söka.">
+            <Input id="person-search" value={personQuery} onChange={(e) => setPersonQuery(e.target.value)} placeholder="Namn…" />
+          </Field>
+          {visiblePersonResults.length > 0 && (
+            <div className="mt-1.5 space-y-1">
+              {visiblePersonResults.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => addExistingPersonToList(r.id, r.name)}
+                  className="block w-full rounded-lg border border-slate-200 px-3 py-1.5 text-left text-sm hover:border-brand-400 hover:bg-brand-50"
+                >
+                  {r.name}
+                </button>
+              ))}
+            </div>
           )}
+
+          <div className="mt-3">
+            {!personOpen ? (
+              <button type="button" onClick={() => setPersonOpen(true)} className="font-medium text-brand-700 hover:underline">+ Ny person</button>
+            ) : (
+              <>
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-slate-600">Ny person</h3>
+                  <button type="button" onClick={() => { setPersonOpen(false); resetPersonFields() }} className="text-sm text-slate-400 hover:text-red-600">Avbryt</button>
+                </div>
+                <div className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label="Förnamn" htmlFor="fn"><Input id="fn" value={firstName} onChange={(e) => setFirstName(e.target.value)} /></Field>
+                    <Field label="Efternamn" htmlFor="ln"><Input id="ln" value={lastName} onChange={(e) => setLastName(e.target.value)} /></Field>
+                  </div>
+                  <div>
+                    <p className="mb-1.5 text-sm font-medium text-slate-700">Kön</p>
+                    <ChipSelect value={gender} onChange={setGender} options={GENDERS} />
+                  </div>
+                  <Field label="Andra namn / smeknamn" htmlFor="aliases" hint="Skriv och tryck Enter för varje namn.">
+                    <TagInput value={aliases} onChange={setAliases} placeholder="Lägg till namn…" />
+                  </Field>
+                  <Field label="Signalement" htmlFor="sign"><Textarea id="sign" rows={2} value={signalement} onChange={(e) => setSignalement(e.target.value)} placeholder="Utseende, klädsel…" /></Field>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label="Adress" htmlFor="addr"><Input id="addr" value={address} onChange={(e) => setAddress(e.target.value)} /></Field>
+                    <Field label="Ort" htmlFor="city"><Input id="city" value={city} onChange={(e) => setCity(e.target.value)} /></Field>
+                  </div>
+                  <Field label="Registreringsnummer" htmlFor="p-regnr" hint="Personens fordon. Skriv och tryck Enter.">
+                    <TagInput value={personRegnrs} onChange={setPersonRegnrs} placeholder="ABC123" transform={normalizeRegnr} />
+                  </Field>
+                  <Field label="Kopplingar" htmlFor="conn" hint="Fritext för att koppla ihop vid sökningar (t.ex. relationer, kända kontakter).">
+                    <Textarea id="conn" rows={2} value={connections} onChange={(e) => setConnections(e.target.value)} />
+                  </Field>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={addNewPersonToList}
+                    disabled={!personHasData({ first_name: firstName, last_name: lastName, aliases })}
+                  >
+                    + Lägg till i listan
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
         </Card>
 
         {/* Kommentar */}
