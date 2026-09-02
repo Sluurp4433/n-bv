@@ -562,6 +562,7 @@ export type Database = {
           make: string | null
           model: string | null
           notes: string | null
+          owner_name: string | null
           registration_normalized: string | null
           registration_number: string
           updated_at: string
@@ -576,6 +577,7 @@ export type Database = {
           make?: string | null
           model?: string | null
           notes?: string | null
+          owner_name?: string | null
           registration_number: string
           updated_at?: string
           vehicle_type?: string | null
@@ -589,6 +591,7 @@ export type Database = {
           make?: string | null
           model?: string | null
           notes?: string | null
+          owner_name?: string | null
           registration_number?: string
           updated_at?: string
           vehicle_type?: string | null
@@ -660,6 +663,7 @@ export type Database = {
           model: string | null
           notes: string | null
           observation_count: number | null
+          owner_name: string | null
           registration_normalized: string | null
           registration_number: string | null
           updated_at: string | null

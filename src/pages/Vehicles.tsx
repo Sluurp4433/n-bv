@@ -116,6 +116,7 @@ export function Vehicles() {
                   <th className="px-4 py-3">Modell</th>
                   <th className="px-4 py-3">Färg</th>
                   <th className="px-4 py-3">Årsmodell</th>
+                  <th className="px-4 py-3">Ägare</th>
                   <th className="px-4 py-3">Senast observerad</th>
                   <th className="px-4 py-3 text-right">Observationer</th>
                 </tr>
@@ -132,6 +133,7 @@ export function Vehicles() {
                     <td className="px-4 py-3 text-slate-700">{v.model || '–'}</td>
                     <td className="px-4 py-3 text-slate-700">{v.color || '–'}</td>
                     <td className="px-4 py-3 text-slate-700">{v.year_model || '–'}</td>
+                    <td className="px-4 py-3 text-slate-700">{v.owner_name || '–'}</td>
                     <td className="px-4 py-3 text-slate-500">
                       {v.last_observed ? formatDate(v.last_observed) : '–'}
                     </td>
@@ -154,7 +156,7 @@ export function Vehicles() {
                     <Badge color="blue">{v.observation_count ?? 0} obs.</Badge>
                   </div>
                   <div className="mt-1 text-sm text-slate-600">
-                    {[v.make, v.model, v.color, v.year_model ? String(v.year_model) : null].filter(Boolean).join(' · ') || 'Inga detaljer'}
+                    {[v.make, v.model, v.color, v.year_model ? String(v.year_model) : null, v.owner_name].filter(Boolean).join(' · ') || 'Inga detaljer'}
                   </div>
                   <div className="mt-1 text-xs text-slate-400">
                     Senast: {v.last_observed ? formatDate(v.last_observed) : '–'}

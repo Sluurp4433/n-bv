@@ -81,7 +81,7 @@ export function VehicleDetail() {
           <div>
             <h1 className="text-2xl font-bold text-brand-800">{vehicle.registration_number}</h1>
             <p className="mt-1 text-slate-600">
-              {[vehicle.make, vehicle.model, vehicle.color, vehicle.year_model ? String(vehicle.year_model) : null]
+              {[vehicle.make, vehicle.model, vehicle.color, vehicle.year_model ? String(vehicle.year_model) : null, vehicle.owner_name]
                 .filter(Boolean)
                 .join(' · ') || 'Inga fordonsdetaljer registrerade'}
             </p>
@@ -95,6 +95,7 @@ export function VehicleDetail() {
           <Detail label="Färg" value={vehicle.color} />
           <Detail label="Fordonstyp" value={vehicle.vehicle_type} />
           <Detail label="Årsmodell" value={vehicle.year_model ? String(vehicle.year_model) : null} />
+          <Detail label="Ägare" value={vehicle.owner_name} />
         </dl>
 
         {vehicle.notes && (
@@ -186,6 +187,7 @@ type EditValues = {
   color: string
   vehicle_type: string
   year_model: string
+  owner_name: string
   notes: string
 }
 
@@ -209,6 +211,7 @@ function VehicleEditModal({
       color: vehicle.color ?? '',
       vehicle_type: vehicle.vehicle_type ?? '',
       year_model: vehicle.year_model != null ? String(vehicle.year_model) : '',
+      owner_name: vehicle.owner_name ?? '',
       notes: vehicle.notes ?? '',
     },
   })
@@ -223,6 +226,7 @@ function VehicleEditModal({
         color: values.color || null,
         vehicle_type: values.vehicle_type || null,
         year_model: values.year_model ? Number(values.year_model) : null,
+        owner_name: values.owner_name || null,
         notes: values.notes || null,
       })
       .eq('id', vehicle.id)
@@ -275,6 +279,9 @@ function VehicleEditModal({
           </Field>
           <Field label="Årsmodell" htmlFor="e-year">
             <Input id="e-year" type="number" inputMode="numeric" {...register('year_model')} />
+          </Field>
+          <Field label="Ägare" htmlFor="e-owner">
+            <Input id="e-owner" {...register('owner_name')} />
           </Field>
         </div>
         <Field label="Övrigt" htmlFor="e-notes">

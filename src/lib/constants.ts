@@ -40,6 +40,7 @@ export const VEHICLE_TYPES = [
   'Moped',
   'EPA-traktor',
   'A-traktor',
+  'Släpvagn',
   'Husbil/husvagn',
   'Annat',
 ] as const

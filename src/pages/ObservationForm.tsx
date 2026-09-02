@@ -23,7 +23,7 @@ const strOpts = (arr: readonly string[]) => arr.map((v) => ({ value: v, label: v
 type NewImage = { file: File; caption: string; url: string }
 type ExistingImage = { id: string; file_path: string; caption: string | null; url: string | null }
 
-type VehicleDraft = { regnr: string; make: string; model: string; color: string; vehicleType: string; yearModel: string }
+type VehicleDraft = { regnr: string; make: string; model: string; color: string; vehicleType: string; yearModel: string; ownerName: string }
 
 type NewPersonDraft = {
   kind: 'new'
@@ -72,6 +72,7 @@ export function ObservationForm() {
   const [color, setColor] = useState('')
   const [vehicleType, setVehicleType] = useState('')
   const [yearModel, setYearModel] = useState('')
+  const [ownerName, setOwnerName] = useState('')
 
   // Personer — lista (befintliga via sök + nya via formulär, en i taget)
   const [personDrafts, setPersonDrafts] = useState<PersonDraft[]>([])
@@ -140,6 +141,7 @@ export function ObservationForm() {
         color: v.color ?? '',
         vehicleType: v.vehicle_type ?? '',
         yearModel: v.year_model != null ? String(v.year_model) : '',
+        ownerName: v.owner_name ?? '',
       }))
     )
     setPersonDrafts(linkedPersons.map((p: any) => ({ kind: 'existing' as const, id: p.id, name: personName(p) })))
@@ -196,9 +198,10 @@ export function ObservationForm() {
     setColor('')
     setVehicleType('')
     setYearModel('')
+    setOwnerName('')
   }
   function currentVehicleDraft(): VehicleDraft | null {
-    return regnr.trim() ? { regnr, make, model, color, vehicleType, yearModel } : null
+    return regnr.trim() ? { regnr, make, model, color, vehicleType, yearModel, ownerName } : null
   }
   function addVehicleToList() {
     const d = currentVehicleDraft()
@@ -255,6 +258,10 @@ export function ObservationForm() {
     }
     if (!user) return
     setSaving(true)
+
+    // Steg 1: själva observationen. Om det här misslyckas finns inget att
+    // koppla fordon/personer/bilder till — då avbryts allt och felet visas.
+    let obsId = id
     try {
       const payload = {
         observed_at: new Date(observedAt).toISOString(),
@@ -265,8 +272,6 @@ export function ObservationForm() {
         priority: priority || 'normal',
         notes: notes || null,
       }
-
-      let obsId = id
       if (isEdit) {
         const { error: e } = await supabase.from('observations').update(payload).eq('id', id!)
         if (e) throw e
@@ -277,10 +282,24 @@ export function ObservationForm() {
         if (e || !data) throw e ?? new Error('insert failed')
         obsId = data.id
       }
-      if (!obsId) throw new Error('no id')
+    } catch {
+      setError('Kunde inte spara. Kontrollera uppgifterna och försök igen.')
+      setSaving(false)
+      return
+    }
+    if (!obsId) {
+      setError('Kunde inte spara. Kontrollera uppgifterna och försök igen.')
+      setSaving(false)
+      return
+    }
 
-      // Fordon
-      for (const v of allVehicles) {
+    // Steg 2: fordon, personer och bilder — var och en isolerad. Ett enskilt
+    // fel (t.ex. ett av flera fordon) ska inte få det att se ut som att HELA
+    // observationen misslyckades när resten faktiskt sparades.
+    const warnings: string[] = []
+
+    for (const v of allVehicles) {
+      try {
         const vehicleId = await upsertVehicle({
           registration_number: v.regnr,
           make: v.make,
@@ -288,12 +307,16 @@ export function ObservationForm() {
           color: v.color,
           vehicle_type: v.vehicleType,
           year_model: v.yearModel ? Number(v.yearModel) : null,
+          owner_name: v.ownerName,
         })
         if (vehicleId) await linkVehicle(obsId, vehicleId)
+      } catch {
+        warnings.push(`Fordon ${v.regnr || ''}`.trim())
       }
+    }
 
-      // Personer (+ ev. fordon kopplade till nya personer)
-      for (const p of allPersons) {
+    for (const p of allPersons) {
+      try {
         const personId = p.kind === 'existing' ? p.id : await createPerson({
           first_name: p.firstName,
           last_name: p.lastName,
@@ -315,23 +338,30 @@ export function ObservationForm() {
             }
           }
         }
+      } catch {
+        warnings.push(`Person ${personDraftLabel(p)}`.trim())
       }
-
-      // Bilder
-      for (const img of newImages) {
-        await uploadObservationImage(obsId, img.file, img.caption, user.id)
-      }
-
-      qc.invalidateQueries({ queryKey: ['observations'] })
-      qc.invalidateQueries({ queryKey: ['vehicles'] })
-      qc.invalidateQueries({ queryKey: ['persons'] })
-      toast.success(isEdit ? 'Observationen har uppdaterats.' : 'Observationen har sparats.')
-      navigate(`/observation/${obsId}`)
-    } catch {
-      setError('Kunde inte spara. Kontrollera uppgifterna och försök igen.')
-    } finally {
-      setSaving(false)
     }
+
+    for (const img of newImages) {
+      try {
+        await uploadObservationImage(obsId, img.file, img.caption, user.id)
+      } catch {
+        warnings.push(`Bild ${img.caption || img.file.name}`.trim())
+      }
+    }
+
+    qc.invalidateQueries({ queryKey: ['observations'] })
+    qc.invalidateQueries({ queryKey: ['vehicles'] })
+    qc.invalidateQueries({ queryKey: ['persons'] })
+
+    if (warnings.length > 0) {
+      toast.error(`Observationen sparades, men det här kunde inte läggas till: ${warnings.join(', ')}.`)
+    } else {
+      toast.success(isEdit ? 'Observationen har uppdaterats.' : 'Observationen har sparats.')
+    }
+    setSaving(false)
+    navigate(`/observation/${obsId}`)
   }
 
   if (isEdit && existing.isLoading) return <LoadingState />
@@ -469,6 +499,9 @@ export function ObservationForm() {
                     />
                   </Field>
                 </div>
+                <Field label="Ägare" htmlFor="owner-name">
+                  <Input id="owner-name" value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="Namn på ägaren" />
+                </Field>
                 <Button type="button" variant="secondary" onClick={addVehicleToList} disabled={!regnr.trim()}>
                   + Lägg till i listan
                 </Button>

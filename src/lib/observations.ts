@@ -8,6 +8,7 @@ export type VehicleInput = {
   color?: string
   vehicle_type?: string
   year_model?: number | null
+  owner_name?: string
   notes?: string
 }
 
@@ -37,6 +38,7 @@ export async function upsertVehicle(input: VehicleInput): Promise<string | null>
       color: input.color || null,
       vehicle_type: input.vehicle_type || null,
       year_model: input.year_model || null,
+      owner_name: input.owner_name || null,
       notes: input.notes || null,
     })
     .select('id')
