@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
@@ -356,6 +357,14 @@ function AuditTab() {
     persons: 'person',
     observation_images: 'bild',
   }
+  // Bara tabeller som har en egen detaljsida kan länkas till.
+  const tablePath: Partial<Record<string, (recordId: string) => string>> = {
+    observations: (recordId) => `/observation/${recordId}`,
+    logbook_entries: (recordId) => `/loggbok/${recordId}`,
+    vehicles: (recordId) => `/fordon/${recordId}`,
+    persons: (recordId) => `/personer/${recordId}`,
+    shifts: (recordId) => `/kalender/pass/${recordId}`,
+  }
 
   if (result.isLoading) return <LoadingState />
 
@@ -367,6 +376,21 @@ function AuditTab() {
   // som "okänd medlem" (en riktig men borttagen/saknad profil).
   function actorName(userId: string | null | undefined): string {
     return userId ? creatorName(map, userId) : 'Systemtest'
+  }
+
+  // Radering ska aldrig vara klickbar (posten finns inte kvar), och bara
+  // tabeller med en egen detaljsida kan länkas alls.
+  function actionCell(a: AuditLog) {
+    const label = `${actionLabel[a.action] ?? a.action} ${tableLabel[a.table_name] ?? a.table_name}`
+    const pathFn = a.action !== 'DELETE' ? tablePath[a.table_name] : undefined
+    if (pathFn && a.record_id) {
+      return (
+        <Link to={pathFn(a.record_id)} className="font-medium text-brand-700 hover:underline">
+          {label}
+        </Link>
+      )
+    }
+    return <>{label}</>
   }
 
   return (
@@ -388,7 +412,7 @@ function AuditTab() {
                   {formatDateTime(a.created_at)}
                 </td>
                 <td className="px-4 py-3 text-slate-800">
-                  {actionLabel[a.action] ?? a.action} {tableLabel[a.table_name] ?? a.table_name}
+                  {actionCell(a)}
                 </td>
                 <td className="px-4 py-3 text-slate-600">{actorName(a.user_id)}</td>
               </tr>
@@ -402,9 +426,7 @@ function AuditTab() {
         {result.data!.rows.map((a) => (
           <Card key={a.id} className="p-3">
             <div className="flex items-center justify-between gap-2">
-              <span className="font-medium text-slate-800">
-                {actionLabel[a.action] ?? a.action} {tableLabel[a.table_name] ?? a.table_name}
-              </span>
+              <span className="font-medium text-slate-800">{actionCell(a)}</span>
               <span className="shrink-0 text-xs text-slate-400">{formatDateTime(a.created_at)}</span>
             </div>
             <div className="mt-0.5 text-xs text-slate-500">{actorName(a.user_id)}</div>
