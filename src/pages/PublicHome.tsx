@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -18,8 +18,23 @@ export function PublicHome() {
   const { session, loading, signIn } = useAuth()
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
+  const [autoLoggedOut, setAutoLoggedOut] = useState(false)
   const site = useSiteSettings()
   const sponsors = useSponsors(true)
+
+  // Visar en förklaring om man hamnade här pga automatisk utloggning vid
+  // inaktivitet, så det inte ser ut som ett fel.
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('nbv-auto-logout')) {
+        setAutoLoggedOut(true)
+        localStorage.removeItem('nbv-auto-logout')
+      }
+    } catch {
+      // localStorage kan vara blockerat – då visas ingen förklaring, men
+      // det påverkar inte själva utloggningen.
+    }
+  }, [])
 
   const {
     register,
@@ -77,6 +92,9 @@ export function PublicHome() {
           <p className="mt-1 text-sm text-slate-500">Internt medlemsverktyg. Endast för registrerade medlemmar.</p>
 
           <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4" noValidate>
+            {autoLoggedOut && (
+              <Alert variant="info">Du loggades ut automatiskt efter en period av inaktivitet.</Alert>
+            )}
             {error && <Alert variant="error">{error}</Alert>}
             <Field label="E-postadress" htmlFor="email" error={errors.email?.message}>
               <Input id="email" type="email" autoComplete="email" inputMode="email" placeholder="namn@exempel.se" {...register('email')} />
