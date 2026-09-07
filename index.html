@@ -6,6 +6,13 @@
     <meta name="robots" content="noindex, nofollow" />
     <meta name="color-scheme" content="light" />
     <title>N-BV</title>
+    <script>
+      // Enkelt skydd mot clickjacking: om sidan hamnat i en ram på en annan
+      // webbplats, bryt ut ur ramen direkt istället för att visas dold där.
+      if (window.top !== window.self) {
+        window.top.location = window.self.location.href
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

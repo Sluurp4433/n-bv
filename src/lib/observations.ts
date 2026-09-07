@@ -67,6 +67,25 @@ export async function clearVehicleLinks(observationId: string): Promise<void> {
 // ---- Bildbilagor ----
 const IMG_BUCKET = 'observation-images'
 
+// Tillåtna bildtyper vid uppladdning, utifrån filändelsen – inte det
+// webbläsaren själv rapporterar (som går att förfalska). Filer med annan
+// ändelse avvisas, och Content-Type sätts alltid till det vi räknat fram
+// här istället för filens egen uppgift.
+const IMAGE_MIME_BY_EXT: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+  gif: 'image/gif',
+}
+
+/** Avgör om filen är en tillåten bildtyp och returnerar i så fall rätt
+ *  Content-Type att spara den med. Returnerar null om typen inte är tillåten. */
+export function safeImageContentType(filename: string): string | null {
+  const ext = filename.split('.').pop()?.toLowerCase() ?? ''
+  return IMAGE_MIME_BY_EXT[ext] ?? null
+}
+
 /** Laddar upp en bild till en observation med sökbar bildtext. */
 export async function uploadObservationImage(
   observationId: string,
@@ -74,11 +93,13 @@ export async function uploadObservationImage(
   caption: string,
   userId: string
 ): Promise<{ error?: string }> {
+  const contentType = safeImageContentType(file.name)
+  if (!contentType) return { error: 'Filtypen stöds inte. Tillåtna format: JPG, PNG, WEBP, GIF.' }
   const safe = file.name.replace(/[^\w.\-]+/g, '_')
   const path = `${observationId}/${crypto.randomUUID()}-${safe}`
   const up = await supabase.storage.from(IMG_BUCKET).upload(path, file, {
     upsert: false,
-    contentType: file.type || undefined,
+    contentType,
   })
   if (up.error) return { error: 'Kunde inte ladda upp bilden.' }
   const { error } = await supabase.from('observation_images').insert({
@@ -112,11 +133,13 @@ export async function uploadLogbookImage(
   caption: string,
   userId: string
 ): Promise<{ error?: string }> {
+  const contentType = safeImageContentType(file.name)
+  if (!contentType) return { error: 'Filtypen stöds inte. Tillåtna format: JPG, PNG, WEBP, GIF.' }
   const safe = file.name.replace(/[^\w.\-]+/g, '_')
   const path = `log/${entryId}/${crypto.randomUUID()}-${safe}`
   const up = await supabase.storage.from(IMG_BUCKET).upload(path, file, {
     upsert: false,
-    contentType: file.type || undefined,
+    contentType,
   })
   if (up.error) return { error: 'Kunde inte ladda upp bilden.' }
   const { error } = await supabase.from('logbook_images').insert({

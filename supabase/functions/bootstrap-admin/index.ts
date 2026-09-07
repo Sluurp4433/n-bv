@@ -7,6 +7,17 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
 
   try {
+    // Extra spärr utöver adminkoll-nedan: utan rätt hemlig kod (satt som
+    // Edge Function-hemlighet, aldrig i frontend-koden) avvisas anropet
+    // direkt, oavsett hur många administratörer som finns.
+    const body = await req.json().catch(() => ({}))
+
+    const expectedSecret = Deno.env.get('BOOTSTRAP_ADMIN_SECRET')
+    const providedSecret = req.headers.get('x-bootstrap-secret') ?? body.secret
+    if (!expectedSecret || providedSecret !== expectedSecret) {
+      return json({ error: 'Ogiltig eller saknad kod.' }, 403)
+    }
+
     const url = Deno.env.get('SUPABASE_URL')!
     const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const admin = createClient(url, service)
@@ -20,7 +31,6 @@ Deno.serve(async (req) => {
       return json({ error: 'En administratör finns redan. Bootstrap är inaktiverad.' }, 403)
     }
 
-    const body = await req.json().catch(() => ({}))
     const email = String(body.email ?? '').trim().toLowerCase()
     const name = String(body.name ?? '').trim()
     if (!email) return json({ error: 'E-postadress krävs.' }, 400)

@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
 import { useToast } from '../components/Toast'
-import { deleteLogbookImage, observationImageUrl, uploadLogbookImage } from '../lib/observations'
+import { deleteLogbookImage, observationImageUrl, safeImageContentType, uploadLogbookImage } from '../lib/observations'
 import { LOGBOOK_CATEGORIES } from '../lib/constants'
 import { toDatetimeLocal } from '../lib/format'
 import { Alert, Button, Card, Field, Input, LoadingState, Textarea } from '../components/ui'
@@ -64,9 +64,17 @@ export function LogbookForm() {
   function addImages(files: FileList | null) {
     if (!files) return
     const additions: NewImage[] = []
+    const rejected: string[] = []
     for (const f of Array.from(files)) {
       if (newImages.length + additions.length >= 8) break
+      if (!safeImageContentType(f.name)) {
+        rejected.push(f.name)
+        continue
+      }
       additions.push({ file: f, caption: '', url: URL.createObjectURL(f) })
+    }
+    if (rejected.length) {
+      toast.error(`Filtypen stöds inte (endast JPG, PNG, WEBP, GIF): ${rejected.join(', ')}`)
     }
     setNewImages((prev) => [...prev, ...additions])
   }

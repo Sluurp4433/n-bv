@@ -9,6 +9,7 @@ import {
   deleteObservationImage,
   linkVehicle,
   observationImageUrl,
+  safeImageContentType,
   uploadObservationImage,
   upsertVehicle,
 } from '../lib/observations'
@@ -178,9 +179,17 @@ export function ObservationForm() {
   function addImages(files: FileList | null) {
     if (!files) return
     const additions: NewImage[] = []
+    const rejected: string[] = []
     for (const f of Array.from(files)) {
       if (newImages.length + additions.length >= 8) break
+      if (!safeImageContentType(f.name)) {
+        rejected.push(f.name)
+        continue
+      }
       additions.push({ file: f, caption: '', url: URL.createObjectURL(f) })
+    }
+    if (rejected.length) {
+      toast.error(`Filtypen stöds inte (endast JPG, PNG, WEBP, GIF): ${rejected.join(', ')}`)
     }
     setNewImages((prev) => [...prev, ...additions])
   }
