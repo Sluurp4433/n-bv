@@ -371,12 +371,15 @@ function AuditTab() {
   const total = result.data?.count ?? 0
   const pages = Math.ceil(total / PAGE_SIZE)
 
-  // Saknad aktör (user_id null) uppstår vid åtgärder utan inloggad användare:
-  // t.ex. när ett medlemskonto skapas via adminfunktionen (kör med systemnyckel)
-  // eller direkt databasunderhåll. Inte samma sak som "okänd medlem" (en riktig
-  // men borttagen/saknad profil).
-  function actorName(userId: string | null | undefined): string {
-    return userId ? creatorName(map, userId) : 'Systemet'
+  // Saknad aktör (user_id null) uppstår vid åtgärder utan inloggad användare.
+  // Triggern märker vilket slag: 'system' = adminfunktion/edge function som kör
+  // med systemnyckel (t.ex. när ett medlemskonto skapas via adminpanelen),
+  // 'db' = direkt databasåtkomst (manuellt underhåll, tester). Inte samma sak
+  // som "okänd medlem" (en riktig men borttagen/saknad profil).
+  function actorName(a: AuditLog): string {
+    if (a.user_id) return creatorName(map, a.user_id)
+    const source = (a.details as { actor_source?: string } | null)?.actor_source
+    return source === 'db' ? 'Systemtest' : 'Systemet'
   }
 
   // Radering ska aldrig vara klickbar (posten finns inte kvar), och bara
@@ -415,7 +418,7 @@ function AuditTab() {
                 <td className="px-4 py-3 text-slate-800">
                   {actionCell(a)}
                 </td>
-                <td className="px-4 py-3 text-slate-600">{actorName(a.user_id)}</td>
+                <td className="px-4 py-3 text-slate-600">{actorName(a)}</td>
               </tr>
             ))}
           </tbody>
@@ -430,7 +433,7 @@ function AuditTab() {
               <span className="font-medium text-slate-800">{actionCell(a)}</span>
               <span className="shrink-0 text-xs text-slate-400">{formatDateTime(a.created_at)}</span>
             </div>
-            <div className="mt-0.5 text-xs text-slate-500">{actorName(a.user_id)}</div>
+            <div className="mt-0.5 text-xs text-slate-500">{actorName(a)}</div>
           </Card>
         ))}
       </div>
