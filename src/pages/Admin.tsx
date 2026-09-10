@@ -371,11 +371,12 @@ function AuditTab() {
   const total = result.data?.count ?? 0
   const pages = Math.ceil(total / PAGE_SIZE)
 
-  // Saknad aktör (user_id null) uppstår bara vid direkta systemåtgärder mot
-  // databasen (t.ex. underhåll/tester utanför appen) — det är inte samma sak
-  // som "okänd medlem" (en riktig men borttagen/saknad profil).
+  // Saknad aktör (user_id null) uppstår vid åtgärder utan inloggad användare:
+  // t.ex. när ett medlemskonto skapas via adminfunktionen (kör med systemnyckel)
+  // eller direkt databasunderhåll. Inte samma sak som "okänd medlem" (en riktig
+  // men borttagen/saknad profil).
   function actorName(userId: string | null | undefined): string {
-    return userId ? creatorName(map, userId) : 'Systemtest'
+    return userId ? creatorName(map, userId) : 'Systemet'
   }
 
   // Radering ska aldrig vara klickbar (posten finns inte kvar), och bara
