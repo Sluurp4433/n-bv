@@ -451,6 +451,7 @@ type PurgeResult = {
   orphan_vehicles: number
   orphan_persons: number
   dry_run: boolean
+  orphaned_file_paths: string[]
 }
 
 function GdprTab() {
@@ -503,10 +504,21 @@ function GdprTab() {
       if (error) throw error
       return data as unknown as PurgeResult
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       setPreview(data)
       if (!data.dry_run) {
-        toast.success('Gallringen har körts.')
+        // Databasraderna är redan borta – städa nu bort de bildfiler som blev
+        // föräldralösa (ren SQL kan inte röra lagringen, bara adminpanelen kan
+        // anropa Storage-API:et via den här klienten).
+        const paths = data.orphaned_file_paths ?? []
+        for (let i = 0; i < paths.length; i += 100) {
+          await supabase.storage.from('observation-images').remove(paths.slice(i, i + 100))
+        }
+        toast.success(
+          paths.length
+            ? `Gallringen har körts. ${paths.length} bildfil${paths.length > 1 ? 'er' : ''} städades bort.`
+            : 'Gallringen har körts.'
+        )
         qc.invalidateQueries()
       }
     },
@@ -567,7 +579,8 @@ function GdprTab() {
               Observationer: <strong>{preview.observations}</strong>, loggbok:{' '}
               <strong>{preview.logbook}</strong>, fordon utan observationer:{' '}
               <strong>{preview.orphan_vehicles}</strong>, personer utan observationer:{' '}
-              <strong>{preview.orphan_persons}</strong>.
+              <strong>{preview.orphan_persons}</strong>, bildfiler:{' '}
+              <strong>{preview.orphaned_file_paths?.length ?? 0}</strong>.
               <div className="mt-1 text-xs opacity-80">Gräns: {formatDateTime(preview.cutoff)}</div>
             </Alert>
           </div>
