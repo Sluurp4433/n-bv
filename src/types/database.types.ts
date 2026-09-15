@@ -241,6 +241,7 @@ export type Database = {
           uploaded_by: string | null
           created_at: string
           search: unknown | null
+          is_cover: boolean
         }
         Insert: {
           id?: string
@@ -249,6 +250,7 @@ export type Database = {
           caption?: string | null
           uploaded_by?: string | null
           created_at?: string
+          is_cover?: boolean
         }
         Update: {
           id?: string
@@ -256,6 +258,7 @@ export type Database = {
           file_path?: string
           caption?: string | null
           uploaded_by?: string | null
+          is_cover?: boolean
           created_at?: string
         }
         Relationships: []
@@ -727,6 +730,7 @@ export type Database = {
           title: string
         }[]
       }
+      set_person_cover_image: { Args: { p_image_id: string }; Returns: undefined }
       within_edit_window: { Args: { created: string }; Returns: boolean }
     }
     Enums: {

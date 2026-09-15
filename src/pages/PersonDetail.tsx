@@ -8,7 +8,7 @@ import { useToast } from '../components/Toast'
 import { Modal, ConfirmDialog } from '../components/Modal'
 import { BackLink } from '../components/BackLink'
 import { ChipSelect, TagInput } from '../components/inputs'
-import { personName, linkPersonVehicle, uploadPersonImage, personImageUrl, deletePersonImage } from '../lib/persons'
+import { personName, linkPersonVehicle, uploadPersonImage, personImageUrl, deletePersonImage, setPersonCoverImage } from '../lib/persons'
 import { upsertVehicle } from '../lib/observations'
 import { GENDERS, genderLabel } from '../lib/constants'
 import { Badge, Button, Card, EmptyState, Field, Input, LoadingState, Textarea } from '../components/ui'
@@ -33,6 +33,7 @@ export function PersonDetail() {
   const [removingVehicleId, setRemovingVehicleId] = useState<string | null>(null)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [removingPhotoId, setRemovingPhotoId] = useState<string | null>(null)
+  const [settingCoverId, setSettingCoverId] = useState<string | null>(null)
 
   const query = useQuery({
     queryKey: ['person', id],
@@ -48,11 +49,17 @@ export function PersonDetail() {
       const vehicles = (vehLinks ?? []).map((l) => l.vehicles as unknown as Vehicle).filter(Boolean)
       const { data: imgRows } = await supabase
         .from('person_images')
-        .select('id,file_path,caption')
+        .select('id,file_path,caption,is_cover')
         .eq('person_id', id!)
         .order('created_at', { ascending: true })
       const images = await Promise.all(
-        (imgRows ?? []).map(async (im) => ({ id: im.id, file_path: im.file_path, caption: im.caption, url: await personImageUrl(im.file_path) }))
+        (imgRows ?? []).map(async (im) => ({
+          id: im.id,
+          file_path: im.file_path,
+          caption: im.caption,
+          is_cover: im.is_cover,
+          url: await personImageUrl(im.file_path),
+        }))
       )
       return { person, observations, vehicles, images }
     },
@@ -64,6 +71,9 @@ export function PersonDetail() {
 
   const { person, observations, vehicles, images } = query.data
   const canManage = canEditOwn(person.created_by, person.created_at, user?.id, isAdmin, settings?.edit_window_hours)
+  // Visar det foto som är markerat som omslagsbild, annars det först tillagda
+  // (bakåtkompatibelt för personer som redan hade foton innan valet fanns).
+  const coverImage = images.find((im) => im.is_cover) ?? images[0]
 
   async function addVehicle(e: React.FormEvent) {
     e.preventDefault()
@@ -127,6 +137,19 @@ export function PersonDetail() {
     qc.invalidateQueries({ queryKey: ['person', id] })
   }
 
+  async function setCover(imgId: string) {
+    setSettingCoverId(imgId)
+    try {
+      await setPersonCoverImage(imgId)
+      qc.invalidateQueries({ queryKey: ['person', id] })
+      qc.invalidateQueries({ queryKey: ['persons'] })
+    } catch {
+      toast.error('Kunde inte ändra omslagsbild.')
+    } finally {
+      setSettingCoverId(null)
+    }
+  }
+
   async function handleDelete() {
     setDeleting(true)
     const { error } = await supabase.from('persons').delete().eq('id', id!)
@@ -146,9 +169,9 @@ export function PersonDetail() {
 
       <Card className="p-5 sm:p-6">
         <div className="flex flex-wrap items-center gap-3">
-          {images.length > 0 && images[0].url && (
+          {coverImage?.url && (
             <img
-              src={images[0].url}
+              src={coverImage.url}
               alt=""
               className="h-16 w-16 flex-shrink-0 rounded-full border border-slate-200 object-cover"
             />
@@ -204,22 +227,36 @@ export function PersonDetail() {
           <p className="text-sm text-slate-400">Inga foton tillagda.</p>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {images.map((im) => (
-              <div key={im.id} className="relative overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-                {im.url && <img src={im.url} alt={im.caption ?? ''} className="aspect-square w-full object-cover" />}
-                {canManage && (
-                  <button
-                    type="button"
-                    onClick={() => removePhoto(im.id, im.file_path)}
-                    disabled={removingPhotoId === im.id}
-                    className="absolute right-1 top-1 rounded-full bg-white/90 px-1.5 py-0.5 text-xs text-slate-500 shadow hover:text-red-600"
-                    aria-label="Ta bort foto"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-            ))}
+            {images.map((im) => {
+              const isCover = im.id === coverImage?.id
+              return (
+                <div key={im.id} className="relative overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                  {im.url && <img src={im.url} alt={im.caption ?? ''} className="aspect-square w-full object-cover" />}
+                  {canManage && (
+                    <>
+                      <label className="absolute bottom-1 left-1 flex items-center gap-1 rounded bg-white/90 px-1.5 py-0.5 text-[11px] text-slate-600 shadow">
+                        <input
+                          type="checkbox"
+                          checked={isCover}
+                          disabled={isCover || settingCoverId === im.id}
+                          onChange={() => setCover(im.id)}
+                        />
+                        Omslagsbild
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(im.id, im.file_path)}
+                        disabled={removingPhotoId === im.id}
+                        className="absolute right-1 top-1 rounded-full bg-white/90 px-1.5 py-0.5 text-xs text-slate-500 shadow hover:text-red-600"
+                        aria-label="Ta bort foto"
+                      >
+                        ✕
+                      </button>
+                    </>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
       </div>

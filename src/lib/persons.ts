@@ -119,3 +119,9 @@ export async function deletePersonImage(id: string, filePath: string): Promise<v
   await supabase.from('person_images').delete().eq('id', id)
   await supabase.storage.from(IMG_BUCKET).remove([filePath])
 }
+
+/** Väljer vilket foto som ska visas som omslagsbild (miniatyr/rubrikbild) för personen. */
+export async function setPersonCoverImage(imageId: string): Promise<void> {
+  const { error } = await supabase.rpc('set_person_cover_image', { p_image_id: imageId })
+  if (error) throw error
+}

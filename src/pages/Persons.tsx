@@ -26,19 +26,20 @@ export function Persons() {
       const persons = data ?? []
       if (persons.length === 0) return []
 
-      // Hämtar en omslagsbild per person (den först tillagda) i en enda
-      // extra fråga, istället för en fråga per person.
+      // Hämtar en omslagsbild per person i en enda extra fråga, istället för
+      // en fråga per person: den valda omslagsbilden om en är vald, annars
+      // den först tillagda.
       const { data: imgRows } = await supabase
         .from('person_images')
-        .select('person_id,file_path')
+        .select('person_id,file_path,is_cover')
         .in('person_id', persons.map((p) => p.id))
         .order('created_at', { ascending: true })
-      const firstPathByPerson = new Map<string, string>()
+      const bestPathByPerson = new Map<string, string>()
       for (const row of imgRows ?? []) {
-        if (!firstPathByPerson.has(row.person_id)) firstPathByPerson.set(row.person_id, row.file_path)
+        if (row.is_cover || !bestPathByPerson.has(row.person_id)) bestPathByPerson.set(row.person_id, row.file_path)
       }
       const urlEntries = await Promise.all(
-        Array.from(firstPathByPerson.entries()).map(async ([personId, path]) => [personId, await personImageUrl(path)] as const)
+        Array.from(bestPathByPerson.entries()).map(async ([personId, path]) => [personId, await personImageUrl(path)] as const)
       )
       const urlByPerson = new Map(urlEntries)
       return persons.map((p) => ({ ...p, photoUrl: urlByPerson.get(p.id) ?? null }))
