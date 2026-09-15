@@ -7,6 +7,7 @@ export const DOCUMENT_CATEGORIES = [
   'Protokoll – årsmöte',
   'Protokoll – månadsmöte',
   'Protokoll – styrelsemöte',
+  'Skadestatistik',
   'Övrigt',
 ] as const
 

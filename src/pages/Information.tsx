@@ -17,6 +17,8 @@ import { Alert, Button, Card, EmptyState, Field, Input, LoadingState, PageHeader
 import { formatDate } from '../lib/format'
 import type { DocumentRow } from '../types/database.types'
 
+type SortOption = 'newest' | 'oldest' | 'name'
+
 export function Information() {
   const { user, profile } = useAuth()
   const { map } = useProfiles()
@@ -25,6 +27,7 @@ export function Information() {
   const docs = useDocuments()
   const [toDelete, setToDelete] = useState<DocumentRow | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [sortBy, setSortBy] = useState<SortOption>('newest')
 
   const canManage = !!profile?.active && (profile?.role === 'admin' || profile?.role === 'styrelse')
 
@@ -45,9 +48,17 @@ export function Information() {
     qc.invalidateQueries({ queryKey: ['documents'] })
   }
 
+  // Sorterar innan gruppering, så varje kategoris lista hamnar i vald ordning
+  // – bra när listan under en kategori (t.ex. Skadestatistik) växer sig lång.
+  const sortedDocs = [...(docs.data ?? [])].sort((a, b) => {
+    if (sortBy === 'name') return a.title.localeCompare(b.title, 'sv')
+    const diff = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    return sortBy === 'oldest' ? diff : -diff
+  })
+
   const grouped = DOCUMENT_CATEGORIES.map((cat) => ({
     cat,
-    items: (docs.data ?? []).filter((d) => (d.category ?? 'Övrigt') === cat),
+    items: sortedDocs.filter((d) => (d.category ?? 'Övrigt') === cat),
   })).filter((g) => g.items.length > 0)
 
   return (
@@ -70,6 +81,19 @@ export function Information() {
         <EmptyState title="Inga dokument ännu" description={canManage ? 'Ladda upp det första dokumentet ovan.' : 'Här dyker föreningens dokument upp.'} icon="📄" />
       ) : (
         <div className="space-y-6">
+          <div className="flex items-center justify-end gap-2">
+            <label htmlFor="doc-sort" className="text-sm text-slate-500">Sortera:</label>
+            <Select
+              id="doc-sort"
+              className="w-auto"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+            >
+              <option value="newest">Nyast först</option>
+              <option value="oldest">Äldst först</option>
+              <option value="name">Namn (A–Ö)</option>
+            </Select>
+          </div>
           {grouped.map((g) => (
             <section key={g.cat}>
               <h2 className="mb-2 font-semibold text-brand-800">{g.cat}</h2>
