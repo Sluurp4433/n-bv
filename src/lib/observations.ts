@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { normalizeRegnr } from './format'
+import { compressImage } from './images'
 
 export type VehicleInput = {
   registration_number?: string
@@ -93,11 +94,13 @@ export async function uploadObservationImage(
   caption: string,
   userId: string
 ): Promise<{ error?: string }> {
-  const contentType = safeImageContentType(file.name)
+  if (!safeImageContentType(file.name)) return { error: 'Filtypen stöds inte. Tillåtna format: JPG, PNG, WEBP, GIF.' }
+  const compressed = await compressImage(file)
+  const contentType = safeImageContentType(compressed.name)
   if (!contentType) return { error: 'Filtypen stöds inte. Tillåtna format: JPG, PNG, WEBP, GIF.' }
-  const safe = file.name.replace(/[^\w.\-]+/g, '_')
+  const safe = compressed.name.replace(/[^\w.\-]+/g, '_')
   const path = `${observationId}/${crypto.randomUUID()}-${safe}`
-  const up = await supabase.storage.from(IMG_BUCKET).upload(path, file, {
+  const up = await supabase.storage.from(IMG_BUCKET).upload(path, compressed, {
     upsert: false,
     contentType,
   })
@@ -133,11 +136,13 @@ export async function uploadLogbookImage(
   caption: string,
   userId: string
 ): Promise<{ error?: string }> {
-  const contentType = safeImageContentType(file.name)
+  if (!safeImageContentType(file.name)) return { error: 'Filtypen stöds inte. Tillåtna format: JPG, PNG, WEBP, GIF.' }
+  const compressed = await compressImage(file)
+  const contentType = safeImageContentType(compressed.name)
   if (!contentType) return { error: 'Filtypen stöds inte. Tillåtna format: JPG, PNG, WEBP, GIF.' }
-  const safe = file.name.replace(/[^\w.\-]+/g, '_')
+  const safe = compressed.name.replace(/[^\w.\-]+/g, '_')
   const path = `log/${entryId}/${crypto.randomUUID()}-${safe}`
-  const up = await supabase.storage.from(IMG_BUCKET).upload(path, file, {
+  const up = await supabase.storage.from(IMG_BUCKET).upload(path, compressed, {
     upsert: false,
     contentType,
   })

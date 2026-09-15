@@ -8,12 +8,14 @@ import { useToast } from '../components/Toast'
 import { Modal, ConfirmDialog } from '../components/Modal'
 import { BackLink } from '../components/BackLink'
 import { ChipSelect, TagInput } from '../components/inputs'
-import { personName, linkPersonVehicle } from '../lib/persons'
+import { personName, linkPersonVehicle, uploadPersonImage, personImageUrl, deletePersonImage } from '../lib/persons'
 import { upsertVehicle } from '../lib/observations'
 import { GENDERS, genderLabel } from '../lib/constants'
 import { Badge, Button, Card, EmptyState, Field, Input, LoadingState, Textarea } from '../components/ui'
 import { formatDateTime, normalizeRegnr } from '../lib/format'
 import type { Observation, Person, Vehicle } from '../types/database.types'
+
+const MAX_PHOTOS = 8
 
 export function PersonDetail() {
   const { id } = useParams()
@@ -29,6 +31,8 @@ export function PersonDetail() {
   const [newVehicleRegnr, setNewVehicleRegnr] = useState('')
   const [addingVehicle, setAddingVehicle] = useState(false)
   const [removingVehicleId, setRemovingVehicleId] = useState<string | null>(null)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [removingPhotoId, setRemovingPhotoId] = useState<string | null>(null)
 
   const query = useQuery({
     queryKey: ['person', id],
@@ -42,7 +46,15 @@ export function PersonDetail() {
         .sort((a, b) => new Date(b.observed_at).getTime() - new Date(a.observed_at).getTime())
       const { data: vehLinks } = await supabase.from('person_vehicles').select('vehicles(*)').eq('person_id', id!)
       const vehicles = (vehLinks ?? []).map((l) => l.vehicles as unknown as Vehicle).filter(Boolean)
-      return { person, observations, vehicles }
+      const { data: imgRows } = await supabase
+        .from('person_images')
+        .select('id,file_path,caption')
+        .eq('person_id', id!)
+        .order('created_at', { ascending: true })
+      const images = await Promise.all(
+        (imgRows ?? []).map(async (im) => ({ id: im.id, file_path: im.file_path, caption: im.caption, url: await personImageUrl(im.file_path) }))
+      )
+      return { person, observations, vehicles, images }
     },
   })
 
@@ -50,7 +62,7 @@ export function PersonDetail() {
   if (query.isError || !query.data)
     return <EmptyState title="Personen hittades inte" action={<Link to="/personer"><Button variant="secondary">Till personlistan</Button></Link>} />
 
-  const { person, observations, vehicles } = query.data
+  const { person, observations, vehicles, images } = query.data
   const canManage = canEditOwn(person.created_by, person.created_at, user?.id, isAdmin, settings?.edit_window_hours)
 
   async function addVehicle(e: React.FormEvent) {
@@ -85,6 +97,36 @@ export function PersonDetail() {
     toast.success('Kopplingen har tagits bort.')
   }
 
+  async function addPhotos(files: FileList | null) {
+    if (!files || !user) return
+    const list = Array.from(files)
+    const room = MAX_PHOTOS - images.length
+    if (room <= 0) {
+      toast.error(`Max ${MAX_PHOTOS} foton per person.`)
+      return
+    }
+    const toUpload = list.slice(0, room)
+    const skipped = list.length - toUpload.length
+    setUploadingPhoto(true)
+    let failed = 0
+    for (const file of toUpload) {
+      const { error } = await uploadPersonImage(person.id, file, '', user.id)
+      if (error) failed++
+    }
+    setUploadingPhoto(false)
+    qc.invalidateQueries({ queryKey: ['person', id] })
+    if (failed) toast.error(`${failed} foto${failed > 1 ? 'n' : ''} kunde inte laddas upp (fel filtyp?).`)
+    else toast.success(toUpload.length > 1 ? 'Fotona har lagts till.' : 'Fotot har lagts till.')
+    if (skipped) toast.error(`Max ${MAX_PHOTOS} foton per person – ${skipped} lades inte till.`)
+  }
+
+  async function removePhoto(imgId: string, filePath: string) {
+    setRemovingPhotoId(imgId)
+    await deletePersonImage(imgId, filePath)
+    setRemovingPhotoId(null)
+    qc.invalidateQueries({ queryKey: ['person', id] })
+  }
+
   async function handleDelete() {
     setDeleting(true)
     const { error } = await supabase.from('persons').delete().eq('id', id!)
@@ -103,11 +145,22 @@ export function PersonDetail() {
       </div>
 
       <Card className="p-5 sm:p-6">
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl font-bold text-brand-800">{personName(person)}</h1>
-          {person.gender && <Badge>{genderLabel(person.gender)}</Badge>}
+        <div className="flex flex-wrap items-center gap-3">
+          {images.length > 0 && images[0].url && (
+            <img
+              src={images[0].url}
+              alt=""
+              className="h-16 w-16 flex-shrink-0 rounded-full border border-slate-200 object-cover"
+            />
+          )}
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-bold text-brand-800">{personName(person)}</h1>
+              {person.gender && <Badge>{genderLabel(person.gender)}</Badge>}
+            </div>
+            {(person.aliases?.length ?? 0) > 0 && <p className="mt-1 text-sm text-slate-500">Även: {person.aliases.join(', ')}</p>}
+          </div>
         </div>
-        {(person.aliases?.length ?? 0) > 0 && <p className="mt-1 text-sm text-slate-500">Även: {person.aliases.join(', ')}</p>}
 
         <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
           <Detail label="Adress" value={person.address} />
@@ -128,6 +181,48 @@ export function PersonDetail() {
           </div>
         )}
       </Card>
+
+      {/* Foton */}
+      <div className="mt-6">
+        <h2 className="mb-2 font-semibold text-brand-800">Foton</h2>
+
+        {canManage && (
+          <label className="mb-3 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
+            {uploadingPhoto ? 'Laddar upp…' : '+ Lägg till foto'}
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              disabled={uploadingPhoto}
+              onChange={(e) => { addPhotos(e.target.files); e.target.value = '' }}
+            />
+          </label>
+        )}
+
+        {images.length === 0 ? (
+          <p className="text-sm text-slate-400">Inga foton tillagda.</p>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {images.map((im) => (
+              <div key={im.id} className="relative overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                {im.url && <img src={im.url} alt={im.caption ?? ''} className="aspect-square w-full object-cover" />}
+                {canManage && (
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(im.id, im.file_path)}
+                    disabled={removingPhotoId === im.id}
+                    className="absolute right-1 top-1 rounded-full bg-white/90 px-1.5 py-0.5 text-xs text-slate-500 shadow hover:text-red-600"
+                    aria-label="Ta bort foto"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Relaterade fordon */}
       <div className="mt-6">

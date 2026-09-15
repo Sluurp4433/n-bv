@@ -4,7 +4,7 @@ import { useUrlParam } from '../lib/useUrlState'
 import { fromState } from '../components/BackLink'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
-import { personName } from '../lib/persons'
+import { personName, personImageUrl } from '../lib/persons'
 import { genderLabel } from '../lib/constants'
 import { Badge, Button, Card, EmptyState, Field, Input, LoadingState } from '../components/ui'
 import { formatDate } from '../lib/format'
@@ -18,12 +18,30 @@ export function Persons() {
   const result = useQuery({
     queryKey: ['persons', query],
     placeholderData: keepPreviousData,
-    queryFn: async (): Promise<Person[]> => {
+    queryFn: async (): Promise<(Person & { photoUrl: string | null })[]> => {
       let q = supabase.from('persons').select('*').order('created_at', { ascending: false }).limit(100)
       if (query.trim()) q = q.textSearch('search', query.trim(), { type: 'websearch', config: 'swedish' })
       const { data, error } = await q
       if (error) throw error
-      return data ?? []
+      const persons = data ?? []
+      if (persons.length === 0) return []
+
+      // Hämtar en omslagsbild per person (den först tillagda) i en enda
+      // extra fråga, istället för en fråga per person.
+      const { data: imgRows } = await supabase
+        .from('person_images')
+        .select('person_id,file_path')
+        .in('person_id', persons.map((p) => p.id))
+        .order('created_at', { ascending: true })
+      const firstPathByPerson = new Map<string, string>()
+      for (const row of imgRows ?? []) {
+        if (!firstPathByPerson.has(row.person_id)) firstPathByPerson.set(row.person_id, row.file_path)
+      }
+      const urlEntries = await Promise.all(
+        Array.from(firstPathByPerson.entries()).map(async ([personId, path]) => [personId, await personImageUrl(path)] as const)
+      )
+      const urlByPerson = new Map(urlEntries)
+      return persons.map((p) => ({ ...p, photoUrl: urlByPerson.get(p.id) ?? null }))
     },
   })
 
@@ -64,18 +82,23 @@ export function Persons() {
             <Link key={p.id} to={`/personer/${p.id}`} state={fromState(loc, 'Tillbaka till personer')}>
               <Card className="p-4 transition-shadow hover:shadow-md">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="truncate font-semibold text-brand-700">{personName(p)}</h3>
-                      {p.gender && <Badge>{genderLabel(p.gender)}</Badge>}
-                    </div>
-                    {(p.aliases?.length ?? 0) > 0 && (
-                      <div className="text-xs text-slate-500">Även: {p.aliases.join(', ')}</div>
+                  <div className="flex min-w-0 items-start gap-3">
+                    {p.photoUrl && (
+                      <img src={p.photoUrl} alt="" className="h-10 w-10 flex-shrink-0 rounded-full border border-slate-200 object-cover" />
                     )}
-                    {p.description && <p className="mt-1 line-clamp-2 text-sm text-slate-600">{p.description}</p>}
-                    <div className="mt-2 text-xs text-slate-500">
-                      {[p.address, p.city].filter(Boolean).join(', ')}
-                      {p.city || p.address ? ' · ' : ''}Tillagd {formatDate(p.created_at)}
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="truncate font-semibold text-brand-700">{personName(p)}</h3>
+                        {p.gender && <Badge>{genderLabel(p.gender)}</Badge>}
+                      </div>
+                      {(p.aliases?.length ?? 0) > 0 && (
+                        <div className="text-xs text-slate-500">Även: {p.aliases.join(', ')}</div>
+                      )}
+                      {p.description && <p className="mt-1 line-clamp-2 text-sm text-slate-600">{p.description}</p>}
+                      <div className="mt-2 text-xs text-slate-500">
+                        {[p.address, p.city].filter(Boolean).join(', ')}
+                        {p.city || p.address ? ' · ' : ''}Tillagd {formatDate(p.created_at)}
+                      </div>
                     </div>
                   </div>
                   <span className="text-slate-400">›</span>

@@ -1,4 +1,6 @@
 import { supabase } from './supabase'
+import { safeImageContentType } from './observations'
+import { compressImage } from './images'
 
 export type PersonInput = {
   first_name?: string
@@ -71,4 +73,49 @@ export function personName(p: { first_name?: string | null; last_name?: string |
   if (full) return full
   if (p.aliases && p.aliases.length) return p.aliases[0]
   return 'Okänd person'
+}
+
+// ---- Foton på personer (samma lagringsyta som observations-/loggboksbilder) ----
+const IMG_BUCKET = 'observation-images'
+
+/** Laddar upp ett foto på en person med sökbar bildtext. */
+export async function uploadPersonImage(
+  personId: string,
+  file: File,
+  caption: string,
+  userId: string
+): Promise<{ error?: string }> {
+  if (!safeImageContentType(file.name)) return { error: 'Filtypen stöds inte. Tillåtna format: JPG, PNG, WEBP, GIF.' }
+  const compressed = await compressImage(file)
+  const contentType = safeImageContentType(compressed.name)
+  if (!contentType) return { error: 'Filtypen stöds inte. Tillåtna format: JPG, PNG, WEBP, GIF.' }
+  const safe = compressed.name.replace(/[^\w.\-]+/g, '_')
+  const path = `person/${personId}/${crypto.randomUUID()}-${safe}`
+  const up = await supabase.storage.from(IMG_BUCKET).upload(path, compressed, {
+    upsert: false,
+    contentType,
+  })
+  if (up.error) return { error: 'Kunde inte ladda upp bilden.' }
+  const { error } = await supabase.from('person_images').insert({
+    person_id: personId,
+    file_path: path,
+    caption: caption || null,
+    uploaded_by: userId,
+  })
+  if (error) {
+    await supabase.storage.from(IMG_BUCKET).remove([path])
+    return { error: 'Kunde inte spara bilden.' }
+  }
+  return {}
+}
+
+export async function personImageUrl(path: string): Promise<string | null> {
+  const { data, error } = await supabase.storage.from(IMG_BUCKET).createSignedUrl(path, 3600)
+  if (error || !data) return null
+  return data.signedUrl
+}
+
+export async function deletePersonImage(id: string, filePath: string): Promise<void> {
+  await supabase.from('person_images').delete().eq('id', id)
+  await supabase.storage.from(IMG_BUCKET).remove([filePath])
 }

@@ -232,6 +232,34 @@ export type Database = {
         Update: { created_at?: string; person_id?: string; vehicle_id?: string }
         Relationships: []
       }
+      person_images: {
+        Row: {
+          id: string
+          person_id: string
+          file_path: string
+          caption: string | null
+          uploaded_by: string | null
+          created_at: string
+          search: unknown | null
+        }
+        Insert: {
+          id?: string
+          person_id: string
+          file_path: string
+          caption?: string | null
+          uploaded_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          person_id?: string
+          file_path?: string
+          caption?: string | null
+          uploaded_by?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       observation_images: {
         Row: {
           id: string
@@ -734,6 +762,7 @@ export type Sponsor = Tables<'sponsors'>
 export type Person = Tables<'persons'>
 export type ObservationImage = Tables<'observation_images'>
 export type LogbookImage = Tables<'logbook_images'>
+export type PersonImage = Tables<'person_images'>
 export type UserRole = Enums<'user_role'>
 export type SearchResult = PublicSchema['Functions']['search_all']['Returns'][number]
 export type FuelGauge = Tables<'fuel_gauge'>
