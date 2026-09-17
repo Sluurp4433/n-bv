@@ -6,6 +6,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { useProfiles, useSettings, creatorName, canEditOwn } from '../lib/hooks'
 import { useToast } from '../components/Toast'
 import { Modal, ConfirmDialog } from '../components/Modal'
+import { Lightbox } from '../components/Lightbox'
 import { BackLink } from '../components/BackLink'
 import { ChipSelect, TagInput } from '../components/inputs'
 import { personName, linkPersonVehicle, uploadPersonImage, personImageUrl, deletePersonImage, setPersonCoverImage } from '../lib/persons'
@@ -34,6 +35,7 @@ export function PersonDetail() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [removingPhotoId, setRemovingPhotoId] = useState<string | null>(null)
   const [settingCoverId, setSettingCoverId] = useState<string | null>(null)
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
 
   const query = useQuery({
     queryKey: ['person', id],
@@ -170,11 +172,17 @@ export function PersonDetail() {
       <Card className="p-5 sm:p-6">
         <div className="flex flex-wrap items-center gap-3">
           {coverImage?.url && (
-            <img
-              src={coverImage.url}
-              alt=""
-              className="h-16 w-16 flex-shrink-0 rounded-full border border-slate-200 object-cover"
-            />
+            <button
+              type="button"
+              onClick={() => setLightboxUrl(coverImage.url)}
+              aria-label="Visa foto större"
+            >
+              <img
+                src={coverImage.url}
+                alt=""
+                className="h-16 w-16 flex-shrink-0 rounded-full border border-slate-200 object-cover"
+              />
+            </button>
           )}
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -231,7 +239,11 @@ export function PersonDetail() {
               const isCover = im.id === coverImage?.id
               return (
                 <div key={im.id} className="relative overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-                  {im.url && <img src={im.url} alt={im.caption ?? ''} className="aspect-square w-full object-cover" />}
+                  {im.url && (
+                    <button type="button" onClick={() => setLightboxUrl(im.url)} className="block w-full" aria-label="Visa foto större">
+                      <img src={im.url} alt={im.caption ?? ''} className="aspect-square w-full object-cover" />
+                    </button>
+                  )}
                   {canManage && (
                     <>
                       <label className="absolute bottom-1 left-1 flex items-center gap-1 rounded bg-white/90 px-1.5 py-0.5 text-[11px] text-slate-600 shadow">
@@ -357,6 +369,8 @@ export function PersonDetail() {
         onConfirm={handleDelete}
         onCancel={() => setConfirmOpen(false)}
       />
+
+      <Lightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />
     </div>
   )
 }
