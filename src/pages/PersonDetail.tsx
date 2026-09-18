@@ -86,9 +86,8 @@ export function PersonDetail() {
   // (bakåtkompatibelt för personer som redan hade foton innan valet fanns).
   const coverImage = images.find((im) => im.is_cover) ?? images[0]
   // Alla aktiva medlemmar får lägga till foton. Ta bort / välja omslagsbild får
-  // den som laddade upp fotot, personens skapare eller admin (samma regel som i databasen).
-  const canControlPhoto = (im: { uploaded_by: string | null }) =>
-    isAdmin || (!!user && (im.uploaded_by === user.id || person.created_by === user.id))
+  // bara den som laddade upp fotot, eller admin (samma regel som i databasen).
+  const canControlPhoto = (im: { uploaded_by: string | null }) => isAdmin || (!!user && im.uploaded_by === user.id)
 
   async function addVehicle(e: React.FormEvent) {
     e.preventDefault()

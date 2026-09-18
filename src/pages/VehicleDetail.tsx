@@ -85,9 +85,8 @@ export function VehicleDetail() {
 
   const { vehicle, observations, images } = query.data
   // Alla aktiva medlemmar får lägga till foton. Ta bort / välja omslagsbild får
-  // den som laddade upp fotot, fordonets skapare eller admin (samma regel som i databasen).
-  const canControlPhoto = (im: { uploaded_by: string | null }) =>
-    isAdmin || (!!user && (im.uploaded_by === user.id || vehicle.created_by === user.id))
+  // bara den som laddade upp fotot, eller admin (samma regel som i databasen).
+  const canControlPhoto = (im: { uploaded_by: string | null }) => isAdmin || (!!user && im.uploaded_by === user.id)
   // Visar det foto som är markerat som omslagsbild, annars det först tillagda.
   const coverImage = images.find((im) => im.is_cover) ?? images[0]
 
