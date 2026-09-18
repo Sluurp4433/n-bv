@@ -59,7 +59,7 @@ export function PersonDetail() {
       const vehicles = (vehLinks ?? []).map((l) => l.vehicles as unknown as Vehicle).filter(Boolean)
       const { data: imgRows } = await supabase
         .from('person_images')
-        .select('id,file_path,caption,is_cover')
+        .select('id,file_path,caption,is_cover,uploaded_by')
         .eq('person_id', id!)
         .order('created_at', { ascending: true })
       const images = await Promise.all(
@@ -68,6 +68,7 @@ export function PersonDetail() {
           file_path: im.file_path,
           caption: im.caption,
           is_cover: im.is_cover,
+          uploaded_by: im.uploaded_by,
           url: await personImageUrl(im.file_path),
         }))
       )
@@ -84,6 +85,10 @@ export function PersonDetail() {
   // Visar det foto som är markerat som omslagsbild, annars det först tillagda
   // (bakåtkompatibelt för personer som redan hade foton innan valet fanns).
   const coverImage = images.find((im) => im.is_cover) ?? images[0]
+  // Alla aktiva medlemmar får lägga till foton. Ta bort / välja omslagsbild får
+  // den som laddade upp fotot, personens skapare eller admin (samma regel som i databasen).
+  const canControlPhoto = (im: { uploaded_by: string | null }) =>
+    isAdmin || (!!user && (im.uploaded_by === user.id || person.created_by === user.id))
 
   async function addVehicle(e: React.FormEvent) {
     e.preventDefault()
@@ -142,9 +147,11 @@ export function PersonDetail() {
 
   async function removePhoto(imgId: string, filePath: string) {
     setRemovingPhotoId(imgId)
-    await deletePersonImage(imgId, filePath)
+    const removed = await deletePersonImage(imgId, filePath)
     setRemovingPhotoId(null)
+    if (!removed) toast.error('Kunde inte ta bort fotot.')
     qc.invalidateQueries({ queryKey: ['person', id] })
+    qc.invalidateQueries({ queryKey: ['persons'] })
   }
 
   async function setCover(imgId: string) {
@@ -228,19 +235,17 @@ export function PersonDetail() {
       <div className="mt-6">
         <h2 className="mb-2 font-semibold text-brand-800">Foton</h2>
 
-        {canManage && (
-          <label className="mb-3 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
-            {uploadingPhoto ? 'Laddar upp…' : '+ Lägg till foto'}
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              disabled={uploadingPhoto}
-              onChange={(e) => { addPhotos(e.target.files); e.target.value = '' }}
-            />
-          </label>
-        )}
+        <label className="mb-3 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
+          {uploadingPhoto ? 'Laddar upp…' : '+ Lägg till foto'}
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            disabled={uploadingPhoto}
+            onChange={(e) => { addPhotos(e.target.files); e.target.value = '' }}
+          />
+        </label>
 
         {images.length === 0 ? (
           <p className="text-sm text-slate-400">Inga foton tillagda.</p>
@@ -255,7 +260,7 @@ export function PersonDetail() {
                       <img src={im.url} alt={im.caption ?? ''} className="aspect-square w-full object-cover" />
                     </button>
                   )}
-                  {canManage && (
+                  {canControlPhoto(im) && (
                     <>
                       <label className="absolute bottom-1 left-1 flex items-center gap-1 rounded bg-white/90 px-1.5 py-0.5 text-[11px] text-slate-600 shadow">
                         <input

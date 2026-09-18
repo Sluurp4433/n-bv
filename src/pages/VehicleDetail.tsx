@@ -53,7 +53,7 @@ export function VehicleDetail() {
         .sort((a, b) => new Date(b.observed_at).getTime() - new Date(a.observed_at).getTime())
       const { data: imgRows } = await supabase
         .from('vehicle_images')
-        .select('id,file_path,caption,is_cover')
+        .select('id,file_path,caption,is_cover,uploaded_by')
         .eq('vehicle_id', id!)
         .order('created_at', { ascending: true })
       const images = await Promise.all(
@@ -62,6 +62,7 @@ export function VehicleDetail() {
           file_path: im.file_path,
           caption: im.caption,
           is_cover: im.is_cover,
+          uploaded_by: im.uploaded_by,
           url: await vehicleImageUrl(im.file_path),
         }))
       )
@@ -83,9 +84,10 @@ export function VehicleDetail() {
     )
 
   const { vehicle, observations, images } = query.data
-  // Samma regel som i databasen (RLS) för att lägga till/ta bort foton:
-  // fordonets skapare, eller admin.
-  const canManagePhotos = isAdmin || (!!user && vehicle.created_by === user.id)
+  // Alla aktiva medlemmar får lägga till foton. Ta bort / välja omslagsbild får
+  // den som laddade upp fotot, fordonets skapare eller admin (samma regel som i databasen).
+  const canControlPhoto = (im: { uploaded_by: string | null }) =>
+    isAdmin || (!!user && (im.uploaded_by === user.id || vehicle.created_by === user.id))
   // Visar det foto som är markerat som omslagsbild, annars det först tillagda.
   const coverImage = images.find((im) => im.is_cover) ?? images[0]
 
@@ -132,8 +134,9 @@ export function VehicleDetail() {
 
   async function removePhoto(imgId: string, filePath: string) {
     setRemovingPhotoId(imgId)
-    await deleteVehicleImage(imgId, filePath)
+    const removed = await deleteVehicleImage(imgId, filePath)
     setRemovingPhotoId(null)
+    if (!removed) toast.error('Kunde inte ta bort fotot.')
     qc.invalidateQueries({ queryKey: ['vehicle', id] })
     qc.invalidateQueries({ queryKey: ['vehicles'] })
   }
@@ -213,19 +216,17 @@ export function VehicleDetail() {
       <div className="mt-6">
         <h2 className="mb-2 font-semibold text-brand-800">Foton</h2>
 
-        {canManagePhotos && (
-          <label className="mb-3 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
-            {uploadingPhoto ? 'Laddar upp…' : '+ Lägg till foto'}
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              disabled={uploadingPhoto}
-              onChange={(e) => { addPhotos(e.target.files); e.target.value = '' }}
-            />
-          </label>
-        )}
+        <label className="mb-3 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
+          {uploadingPhoto ? 'Laddar upp…' : '+ Lägg till foto'}
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            disabled={uploadingPhoto}
+            onChange={(e) => { addPhotos(e.target.files); e.target.value = '' }}
+          />
+        </label>
 
         {images.length === 0 ? (
           <p className="text-sm text-slate-400">Inga foton tillagda.</p>
@@ -240,7 +241,7 @@ export function VehicleDetail() {
                       <img src={im.url} alt={im.caption ?? ''} className="aspect-[4/3] w-full object-cover" />
                     </button>
                   )}
-                  {canManagePhotos && (
+                  {canControlPhoto(im) && (
                     <>
                       <label className="absolute bottom-1 left-1 flex items-center gap-1 rounded bg-white/90 px-1.5 py-0.5 text-[11px] text-slate-600 shadow">
                         <input

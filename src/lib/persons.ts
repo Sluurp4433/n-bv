@@ -115,9 +115,13 @@ export async function personImageUrl(path: string): Promise<string | null> {
   return data.signedUrl
 }
 
-export async function deletePersonImage(id: string, filePath: string): Promise<void> {
-  await supabase.from('person_images').delete().eq('id', id)
+/** Tar bort fotot. Filen raderas ur lagringen först när databasraden faktiskt
+ *  tagits bort (behörigheten avgörs av databasen) – returnerar false annars. */
+export async function deletePersonImage(id: string, filePath: string): Promise<boolean> {
+  const { data } = await supabase.from('person_images').delete().eq('id', id).select('id')
+  if (!data || data.length === 0) return false
   await supabase.storage.from(IMG_BUCKET).remove([filePath])
+  return true
 }
 
 /** Tar bort personens filer ur lagringen (t.ex. när hela personen raderats – databasraderna
