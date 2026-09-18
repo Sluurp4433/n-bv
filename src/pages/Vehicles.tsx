@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { normalizeRegnr } from '../lib/format'
+import { vehicleImageUrl } from '../lib/vehicles'
 import { Badge, Button, Card, EmptyState, Field, Input, LoadingState } from '../components/ui'
 import { formatDate } from '../lib/format'
 import { Pagination } from './Logbook'
@@ -49,7 +50,32 @@ export function Vehicles() {
 
       const { data, error, count } = await q
       if (error) throw error
-      return { rows: (data ?? []) as VehicleOverview[], count: count ?? 0 }
+      const vehicles = (data ?? []) as VehicleOverview[]
+
+      // Hämtar en omslagsbild per fordon i en enda extra fråga, istället för
+      // en fråga per fordon: den valda omslagsbilden om en är vald, annars
+      // den först tillagda.
+      const ids = vehicles.map((v) => v.id).filter((x): x is string => !!x)
+      const bestPathByVehicle = new Map<string, string>()
+      if (ids.length > 0) {
+        const { data: imgRows } = await supabase
+          .from('vehicle_images')
+          .select('vehicle_id,file_path,is_cover')
+          .in('vehicle_id', ids)
+          .order('created_at', { ascending: true })
+        for (const row of imgRows ?? []) {
+          if (row.is_cover || !bestPathByVehicle.has(row.vehicle_id)) bestPathByVehicle.set(row.vehicle_id, row.file_path)
+        }
+      }
+      const urlEntries = await Promise.all(
+        Array.from(bestPathByVehicle.entries()).map(async ([vehicleId, path]) => [vehicleId, await vehicleImageUrl(path)] as const)
+      )
+      const urlByVehicle = new Map(urlEntries)
+      const rows: (VehicleOverview & { photoUrl: string | null })[] = vehicles.map((v) => ({
+        ...v,
+        photoUrl: (v.id && urlByVehicle.get(v.id)) || null,
+      }))
+      return { rows, count: count ?? 0 }
     },
   })
 
@@ -111,6 +137,7 @@ export function Vehicles() {
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
+                  <th className="w-24 py-3 pl-4"></th>
                   <th className="px-4 py-3">Regnr</th>
                   <th className="px-4 py-3">Märke</th>
                   <th className="px-4 py-3">Modell</th>
@@ -124,6 +151,11 @@ export function Vehicles() {
               <tbody className="divide-y divide-slate-100">
                 {result.data!.rows.map((v) => (
                   <tr key={v.id} className="hover:bg-slate-50">
+                    <td className="py-2 pl-4">
+                      {v.photoUrl && (
+                        <img src={v.photoUrl} alt="" className="h-10 w-16 rounded-md border border-slate-200 object-cover" />
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <Link to={`/fordon/${v.id}`} state={fromState(loc, 'Tillbaka till fordon')} className="font-semibold text-brand-700 hover:underline">
                         {v.registration_number}
@@ -150,16 +182,21 @@ export function Vehicles() {
           <div className="space-y-2 md:hidden">
             {result.data!.rows.map((v) => (
               <Link key={v.id} to={`/fordon/${v.id}`} state={fromState(loc, 'Tillbaka till fordon')}>
-                <Card className="p-4 transition-shadow hover:shadow-md">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-brand-700">{v.registration_number}</span>
-                    <Badge color="blue">{v.observation_count ?? 0} obs.</Badge>
-                  </div>
-                  <div className="mt-1 text-sm text-slate-600">
-                    {[v.make, v.model, v.color, v.year_model ? String(v.year_model) : null, v.owner_name].filter(Boolean).join(' · ') || 'Inga detaljer'}
-                  </div>
-                  <div className="mt-1 text-xs text-slate-400">
-                    Senast: {v.last_observed ? formatDate(v.last_observed) : '–'}
+                <Card className="flex items-start gap-3 p-4 transition-shadow hover:shadow-md">
+                  {v.photoUrl && (
+                    <img src={v.photoUrl} alt="" className="h-12 w-16 flex-shrink-0 rounded-md border border-slate-200 object-cover" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-brand-700">{v.registration_number}</span>
+                      <Badge color="blue">{v.observation_count ?? 0} obs.</Badge>
+                    </div>
+                    <div className="mt-1 text-sm text-slate-600">
+                      {[v.make, v.model, v.color, v.year_model ? String(v.year_model) : null, v.owner_name].filter(Boolean).join(' · ') || 'Inga detaljer'}
+                    </div>
+                    <div className="mt-1 text-xs text-slate-400">
+                      Senast: {v.last_observed ? formatDate(v.last_observed) : '–'}
+                    </div>
                   </div>
                 </Card>
               </Link>

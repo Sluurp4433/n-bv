@@ -120,6 +120,13 @@ export async function deletePersonImage(id: string, filePath: string): Promise<v
   await supabase.storage.from(IMG_BUCKET).remove([filePath])
 }
 
+/** Tar bort personens filer ur lagringen (t.ex. när hela personen raderats – databasraderna
+ *  följer med automatiskt, men själva filerna gör det inte). */
+export async function removePersonImageFiles(paths: string[]): Promise<void> {
+  if (paths.length === 0) return
+  await supabase.storage.from(IMG_BUCKET).remove(paths)
+}
+
 /** Väljer vilket foto som ska visas som omslagsbild (miniatyr/rubrikbild) för personen. */
 export async function setPersonCoverImage(imageId: string): Promise<void> {
   const { error } = await supabase.rpc('set_person_cover_image', { p_image_id: imageId })

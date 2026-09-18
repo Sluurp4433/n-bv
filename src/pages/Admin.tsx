@@ -357,6 +357,7 @@ function AuditTab() {
     persons: 'person',
     observation_images: 'bild',
     person_images: 'bild',
+    vehicle_images: 'bild',
   }
   // Bara tabeller som har en egen detaljsida kan länkas till.
   const tablePath: Partial<Record<string, (recordId: string) => string>> = {

@@ -9,7 +9,15 @@ import { Modal, ConfirmDialog } from '../components/Modal'
 import { Lightbox } from '../components/Lightbox'
 import { BackLink } from '../components/BackLink'
 import { ChipSelect, TagInput } from '../components/inputs'
-import { personName, linkPersonVehicle, uploadPersonImage, personImageUrl, deletePersonImage, setPersonCoverImage } from '../lib/persons'
+import {
+  personName,
+  linkPersonVehicle,
+  uploadPersonImage,
+  personImageUrl,
+  deletePersonImage,
+  removePersonImageFiles,
+  setPersonCoverImage,
+} from '../lib/persons'
 import { upsertVehicle } from '../lib/observations'
 import { GENDERS, genderLabel } from '../lib/constants'
 import { Badge, Button, Card, EmptyState, Field, Input, LoadingState, Textarea } from '../components/ui'
@@ -158,6 +166,9 @@ export function PersonDetail() {
     setDeleting(false)
     setConfirmOpen(false)
     if (error) return toast.error('Kunde inte ta bort personen (kräver admin).')
+    // Databasraderna för fotona följer med automatiskt, men filerna i
+    // lagringen måste tas bort separat – annars blir de kvar i onödan.
+    await removePersonImageFiles(images.map((im) => im.file_path))
     toast.success('Personen har tagits bort.')
     qc.invalidateQueries({ queryKey: ['persons'] })
     navigate('/personer')
